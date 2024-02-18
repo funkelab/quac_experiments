@@ -1,0 +1,24 @@
+project: "retina-ddr-classification"
+notes: "Attempt to replicate DDR classification results using VGG16"
+tags: ["retina", "quac", "vgg16", "classification"]
+data:
+  csv_path: "/nrs/funke/adjavond/data/retina/ddrdataset/val.csv"
+  data_location: "/nrs/funke/adjavond/data/retina/ddrdataset/DR_grading/DR_grading"
+  batch_size: 32
+val_data:
+  csv_path: "/nrs/funke/adjavond/data/retina/ddrdataset/test.csv"
+  data_location: "/nrs/funke/adjavond/data/retina/ddrdataset/DR_grading/DR_grading"
+  batch_size: 32
+  augment: False
+  balance: False
+model:
+  type: "vgg"
+  num_classes: 5
+  image_size: 224
+  input_fmaps: 3
+  fmaps: 32
+training:
+  epochs: 10
+  learning_rate: 0.0001
+  checkpoint_dir: "/nrs/funke/adjavond/projects/quac/retina-ddr-classification"
+  device: "cuda"

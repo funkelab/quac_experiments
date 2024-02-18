@@ -1,0 +1,24 @@
+project: "retina-ddr-classification"
+notes: "Attempt to replicate DDR classification results using Resnet18 using pre-trained weights"
+tags: ["retina", "quac", "resnet18", "classification", "pretrained"]
+data:
+  csv_path: "/nrs/funke/adjavond/data/retina/ddrdataset/train.csv"
+  data_location: "/nrs/funke/adjavond/data/retina/ddrdataset/DR_grading/DR_grading"
+  batch_size: 32
+val_data:
+  csv_path: "/nrs/funke/adjavond/data/retina/ddrdataset/val.csv"
+  data_location: "/nrs/funke/adjavond/data/retina/ddrdataset/DR_grading/DR_grading"
+  batch_size: 32
+  augment: False
+  balance: False
+model:
+  type: "resnet18_pretrained"
+  num_classes: 5
+  image_size: 224
+  input_fmaps: 3
+  fmaps: 32
+training:
+  epochs: 100
+  learning_rate: 0.0001
+  checkpoint_dir: "/nrs/funke/adjavond/projects/quac/retina-ddr-classification/resnet18_pretrained_20240216"
+  device: "cuda"
