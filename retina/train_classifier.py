@@ -176,10 +176,6 @@ def train_classifier(
         val_accuracy_macro = torchmetrics.Accuracy(
             task="multiclass", num_classes=config.model.num_classes, average="macro"
         ).to(config.training.device)
-        # Don't need this, it's basically matching the regular accuracy
-        # val_accuracy_weighted = torchmetrics.Accuracy(
-        #     task="multiclass", num_classes=config.model.num_classes, average="weighted"
-        # ).to(config.training.device) 
 
     for i in range(config.training.epochs):
         avg_loss = 0
@@ -233,20 +229,14 @@ def train_classifier(
                     val_accuracy_macro.update(
                         outputs, targets.to(config.training.device)
                     )
-                    # val_accuracy_weighted.update
-                    #     outputs, targets.to(config.training.device)
-                    # )
             model.train()
             val_acc = val_metric.compute()
             val_acc_macro = val_accuracy_macro.compute()
-            # val_acc_weighted = val_accuracy_weighted.compute()
             val_metric.reset()
             val_accuracy_macro.reset()
-            # val_accuracy_weighted.reset()
             print(f"Epoch {i+1}/{config.training.epochs} - val accuracy: {val_acc}")
             metrics["val_accuracy"] = val_acc
             metrics["val_accuracy_macro"] = val_acc_macro
-            # metrics["val_accuracy_weighted"] = val_acc_weighted
             # Plotting the confusion matrix
             fig, _ = plot_confusion_matrix(
                 val_confusion.compute().cpu().numpy(),
