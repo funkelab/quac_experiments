@@ -5,3 +5,4 @@ example/
 **/*.pyc
 **/output/
 **/checkpoints/
+**scratch.py
