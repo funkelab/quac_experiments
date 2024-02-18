@@ -1,0 +1,7 @@
+example/
+**.egg**
+**wandb/
+**logs/
+**/*.pyc
+**/output/
+**/checkpoints/
