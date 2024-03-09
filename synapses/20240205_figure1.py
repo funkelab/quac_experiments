@@ -113,7 +113,7 @@ def fancify(ax, color):
     ax.set_yticks([])
 
 colors = {
-    0:  "#1F77B4",
+    0: "#1F77B4",
     1: "#FF7F0E",
     2: "#4AAD4A",
     3: "#D62728",
