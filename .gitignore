@@ -3,6 +3,6 @@ example/
 **wandb/
 **logs/
 **/*.pyc
-**/output/
+**/output*/
 **/checkpoints/
 **scratch.py

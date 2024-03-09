@@ -1,3 +1,6 @@
+"""
+This version just does a train-test split on the dataset instead of using a separate validation set.
+"""
 from config import ExperimentConfig, ModelConfig, DataConfig, TrainingConfig
 from funlib.learn.torch.models import Vgg2D
 import matplotlib.pyplot as plt
@@ -6,6 +9,7 @@ import numpy as np
 from pathlib import Path
 from plot_confusion import plot_confusion_matrix
 from resnet import ResNet2D
+from sklearn.model_selection import train_test_split
 import timm
 import tifffile
 from torchvision import transforms
@@ -71,12 +75,12 @@ def initialize_model(config: ModelConfig):
     return model
 
 
-def initialize_dataloader(config: DataConfig):
+def initialize_dataloader(config: DataConfig, seed:int=42):
     """
     data_path: str, batch_size: int = 32, augment: bool = True
     """
     if config.augment:
-        transform = transforms.Compose(
+        train_transform = transforms.Compose(
             [
                 transforms.RandomHorizontalFlip(),
                 transforms.RandomVerticalFlip(),
@@ -88,19 +92,33 @@ def initialize_dataloader(config: DataConfig):
             ]
         )
     else:
-        transform =  None
-    dataset = ImageFolder(root=config.data_path, transform=transform, loader=imread)
+        train_transform =  None
+    full_dataset = ImageFolder(root=config.data_path, loader=imread)
+
+    samples = list(range(len(full_dataset)))
+    train_idx, val_idx = train_test_split(samples, test_size=0.5, stratify=full_dataset.targets, random_state=seed)
+
+    # Create a subset of the dataset, which is used for training
+    dataset = torch.utils.data.Subset(full_dataset, train_idx)
+    dataset.transform = train_transform
+
+    # Another subset of the dataset, which is used for validation
+    val_dataset = torch.utils.data.Subset(full_dataset, val_idx)
+
     sampler = None
     if config.balance:
         # Balance samples by inverse class frequency
-        _, count = np.unique(dataset.targets, return_counts=True)
-        sample_counts = np.array([count[i] for i in dataset.targets])
+        train_ds_targets = np.array(full_dataset.targets)[train_idx]
+        _, count = np.unique(train_ds_targets, return_counts=True)
+        sample_counts = np.array([count[i] for i in train_ds_targets])
         weights = 1 / sample_counts
         sampler = torch.utils.data.WeightedRandomSampler(
             weights=weights, num_samples=len(dataset), replacement=True
         )
     dataloader = DataLoader(dataset, batch_size=config.batch_size, sampler=sampler, drop_last=config.balance)
-    return dataloader
+
+    val_dataloader = DataLoader(val_dataset, batch_size=config.batch_size, drop_last=False)
+    return dataloader, val_dataloader
 
 
 def save_checkpoint(checkpoint_dir, i, model, model_ema, optimizer, avg_loss, acc, val_acc=None):
@@ -140,17 +158,14 @@ def train_classifier(
     log_config.update(config.model.dict())
     log_config.update(config.training.dict())
 
-    run = wandb.init(
-        project=config.project, notes=config.notes, tags=config.tags, config=log_config
-    )
-
+    config.tags.append("train_classifier_v2")
     checkpoint_dir = Path(config.training.checkpoint_dir)
 
-    dataloader = initialize_dataloader(config.data)
-    validation = False
-    if config.val_data is not None:
-        validation = True
-        val_dataloader = initialize_dataloader(config.val_data)
+    dataloader, val_dataloader = initialize_dataloader(config.data)
+    validation = True
+    # if config.val_data is not None:
+    #     validation = True
+    #     val_dataloader = initialize_dataloader(config.val_data)
 
     model = initialize_model(config.model).to(config.training.device)
     model_ema = timm.utils.ModelEmaV2(model)
@@ -172,6 +187,12 @@ def train_classifier(
         val_accuracy_macro = torchmetrics.Accuracy(
             task="multiclass", num_classes=config.model.num_classes, average="macro"
         ).to(config.training.device)
+
+    # Only create the run after everything has initialized without errors
+    run = wandb.init(
+        project=config.project, notes=config.notes, tags=config.tags, config=log_config
+    )
+
 
     for i in range(config.training.epochs):
         avg_loss = 0
@@ -239,7 +260,7 @@ def train_classifier(
             # Plotting the confusion matrix
             fig, _ = plot_confusion_matrix(
                 val_confusion.compute().cpu().numpy(),
-                val_dataloader.dataset.classes,
+                val_dataloader.dataset.dataset.classes,
                 title=f"Validation Confusion Matrix {i+1}/{config.training.epochs}",
             )
             metrics["validation_confusion"] = wandb.Image(fig)
