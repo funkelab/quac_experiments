@@ -1,4 +1,4 @@
-from config import ExperimentConfig, ModelConfig, DataConfig, TrainingConfig
+from config import ExperimentConfig, ModelConfig, DataConfig
 from dataset import RetinaDataset
 from funlib.learn.torch.models import Vgg2D
 import matplotlib.pyplot as plt
@@ -82,7 +82,7 @@ def initialize_dataloader(config: DataConfig):
                 # Noise to avoid overfitting
                 # AddGaussianNoise(mean=0.0, std=0.01, clip=True),
                 # transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.1),
-                # Reshape to ImageNet size
+                # Reshape to ImageNet size and expected mean and std
                 transforms.Resize((224, 224)),
                 transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
             ]
@@ -109,13 +109,14 @@ def initialize_dataloader(config: DataConfig):
     return dataloader
 
 
-def save_checkpoint(checkpoint_dir, i, model, optimizer, avg_loss, acc, val_acc=None):
+def save_checkpoint(checkpoint_dir, i, model, model_ema,optimizer, avg_loss, acc, val_acc=None):
     checkpoint_dir = Path(checkpoint_dir)
     checkpoint_dir.mkdir(exist_ok=True, parents=True)
 
     checkpoint = {
         "epoch": i,
         "model_state_dict": model.state_dict(),
+        "model_ema_state_dict": model_ema.module.state_dict(),
         "optimizer_state_dict": optimizer.state_dict(),
         "loss": avg_loss,
         "accuracy": acc,
@@ -159,9 +160,14 @@ def train_classifier(
 
     model = initialize_model(config.model).to(config.training.device)
     model_ema = timm.utils.ModelEmaV2(model)
+    model_ema.eval()
 
     loss_fn = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=config.training.learning_rate)
+    # Learning rate scheduler
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(
+        optimizer, milestones=[config.training.scheduler.epoch], gamma=0.1
+    )
 
     metric = torchmetrics.Accuracy(
         task="multiclass", num_classes=config.model.num_classes
@@ -193,7 +199,17 @@ def train_classifier(
             optimizer.step()
             avg_loss += loss.item()
             metric.update(outputs, targets.to(config.training.device))
-            model_ema.update(model)
+            # Updating EMA model
+            if i >= config.training.ema.ema_start:
+                model_ema.update(model)
+            else: 
+                # Just set the EMA model weights to the current model weights
+                model_ema.set(model)
+            # Unfreeze the model weights after a certain epoch
+            if i == config.training.scheduler.epoch and config.training.scheduler.unfreeze:
+                for param in model.parameters():
+                    param.requires_grad = True
+
         acc = metric.compute()
         avg_loss /= len(dataloader)
         # Log metrics
@@ -214,8 +230,8 @@ def train_classifier(
         }
 
         # Validation
+        # We use the EMA model for validation/inference
         if validation:
-            model.eval()
             with torch.no_grad():
                 for batch in tqdm(
                     val_dataloader,
@@ -223,13 +239,13 @@ def train_classifier(
                     desc=f"Epoch {i+1}/{config.training.epochs} - validation",
                 ):
                     inputs, targets = batch
-                    outputs = model(inputs.to(config.training.device))
+                    outputs = model_ema.module(inputs.to(config.training.device))
                     val_metric.update(outputs, targets.to(config.training.device))
                     val_confusion.update(outputs, targets.to(config.training.device))
                     val_accuracy_macro.update(
                         outputs, targets.to(config.training.device)
                     )
-            model.train()
+            # model.train()
             val_acc = val_metric.compute()
             val_acc_macro = val_accuracy_macro.compute()
             val_metric.reset()
@@ -250,10 +266,11 @@ def train_classifier(
         else:
             val_acc = None
         # Save checkpoint
-        save_checkpoint(checkpoint_dir, i, model, optimizer, avg_loss, acc, val_acc)
+        save_checkpoint(checkpoint_dir, i, model, model_ema, optimizer, avg_loss, acc, val_acc)
 
         # Log to wandb
         run.log(metrics)
+        scheduler.step()
     run.finish()
 
 

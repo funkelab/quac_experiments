@@ -18,11 +18,23 @@ class ModelConfig(BaseModel):
     fmaps: int = 32
 
 
+class SchedulerConfig(BaseModel):
+    epoch: int = 0
+    unfreeze: bool = True
+
+
+class EMAModelConfig(BaseModel):
+    decay: float = 0.9999
+    ema_start: int = 0
+
+
 class TrainingConfig(BaseModel):
     epochs: int = 10
     learning_rate: float = 1e-4
     checkpoint_dir: str = "checkpoints"
     device: str = "cuda"
+    scheduler: SchedulerConfig
+    ema: EMAModelConfig
 
 
 class ExperimentConfig(BaseModel):

@@ -19,6 +19,6 @@ model:
   fmaps: 32
 training:
   epochs: 100
-  learning_rate: 0.0001
+  learning_rate: 0.001
   checkpoint_dir: "/nrs/funke/adjavond/projects/quac/retina-ddr-classification/resnet18_pretrained_frozen"
   device: "cuda"

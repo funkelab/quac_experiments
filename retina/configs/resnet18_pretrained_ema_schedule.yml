@@ -1,6 +1,7 @@
 project: "retina-ddr-classification"
-notes: "Attempt to replicate DDR classification results using Resnet18 using pre-trained weights"
-tags: ["retina", "quac", "resnet18", "classification", "pretrained"]
+notes: "A ResNet18 with pre-trained weights where the pre-trained weights are frozen and then unfrozen on a schedule. 
+        We also use EMA on the weights."
+tags: ["retina", "quac", "resnet18", "classification", "pretrained", "frozen", "schedule", "model_ema"]
 data:
   csv_path: "/nrs/funke/adjavond/data/retina/ddrdataset/train.csv"
   data_location: "/nrs/funke/adjavond/data/retina/ddrdataset/DR_grading/DR_grading"
@@ -12,7 +13,7 @@ val_data:
   augment: False
   balance: False
 model:
-  type: "resnet18_pretrained"
+  type: "resnet18_pretrained_frozen"
   num_classes: 5
   image_size: 224
   input_fmaps: 3
@@ -20,5 +21,12 @@ model:
 training:
   epochs: 100
   learning_rate: 0.001
-  checkpoint_dir: "/nrs/funke/adjavond/projects/quac/retina-ddr-classification/resnet18_pretrained_20240216"
+  checkpoint_dir: "/nrs/funke/adjavond/projects/quac/retina-ddr-classification/resnet18_pretrained_frozen"
   device: "cuda"
+  scheduler:
+    epoch: 20
+    unfreeze: True
+  ema:
+    decay: 0.9999
+    ema_start: 20
+
