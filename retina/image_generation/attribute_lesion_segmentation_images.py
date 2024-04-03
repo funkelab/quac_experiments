@@ -52,35 +52,35 @@ evaluator = Evaluator(classifier)
 # %%
 image_paths = list(image_directory.glob("*.jpg"))
 
-# %% Start by classifying the images, to make sure that nothing went wrong in the generation
+# # %% Start by classifying the images, to make sure that nothing went wrong in the generation
 
-classes_og = []
-classes_cf = []
-for path in tqdm(image_paths):
-    cf_path = counterfactual_directory / path.name
-    label_path = label_directory / f"{path.stem}.tif"
-    assert cf_path.exists(), f"Counterfactual image {cf_path} does not exist"
-    assert label_path.exists(), f"Label image {label_path} does not exist"
-    image = Image.open(path)
-    cf_image = Image.open(cf_path)
-    label_image = Image.open(label_path)
+# classes_og = []
+# classes_cf = []
+# for path in tqdm(image_paths):
+#     cf_path = counterfactual_directory / path.name
+#     label_path = label_directory / f"{path.stem}.tif"
+#     assert cf_path.exists(), f"Counterfactual image {cf_path} does not exist"
+#     assert label_path.exists(), f"Label image {label_path} does not exist"
+#     image = Image.open(path)
+#     cf_image = Image.open(cf_path)
+#     label_image = Image.open(label_path)
 
-    x = transform(image)
-    x_t = transform(cf_image)
+#     x = transform(image)
+#     x_t = transform(cf_image)
 
-    with torch.no_grad():
-        y = evaluator.run_inference(x)[0].argmax().item()
-        y_t = evaluator.run_inference(x_t)[0].argmax().item()
+#     with torch.no_grad():
+#         y = evaluator.run_inference(x)[0].argmax().item()
+#         y_t = evaluator.run_inference(x_t)[0].argmax().item()
 
-    classes_og.append(y)
-    classes_cf.append(y_t)
+#     classes_og.append(y)
+#     classes_cf.append(y_t)
 
 # %%
-from sklearn.metrics import confusion_matrix, classification_report
-import seaborn as sns
+# from sklearn.metrics import confusion_matrix, classification_report
+# import seaborn as sns
 
-cm = confusion_matrix(np.zeros_like(classes_cf), classes_cf, normalize="true")
-sns.heatmap(cm, annot=True)
+# cm = confusion_matrix(np.zeros_like(classes_cf), classes_cf, normalize="true")
+# sns.heatmap(cm, annot=True)
 
 # %% Next, we'll do attribution
 
@@ -175,7 +175,7 @@ viz_transform = transforms.Compose(
 def load_labels(image_path, img_size=224, label_types=["EX", "HE", "MA", "SE"]):
     label_transform = transforms.Compose(
         [
-            transforms.Resize(img_size),
+            transforms.Resize(img_size, interpolation=Image.NEAREST),
             transforms.CenterCrop(img_size),
         ]
     )
@@ -188,6 +188,25 @@ def load_labels(image_path, img_size=224, label_types=["EX", "HE", "MA", "SE"]):
         label = np.array(label) / 255
         all_labels += label * (i+1)
     return all_labels
+
+
+def load_labels_separate(image_path, img_size=224, label_types=["EX", "HE", "MA", "SE"]):
+    label_transform = transforms.Compose(
+        [
+            transforms.Resize(img_size, interpolation=Image.NEAREST),
+            transforms.CenterCrop(img_size),
+        ]
+    )
+    all_labels = []
+    for i, label_type in enumerate(label_types):
+        label_path = str(image_path).replace("image", f"label/{label_type}").replace("jpg", "tif")
+        label = Image.open(label_path)
+        label = label_transform(label)
+
+        label = np.array(label) / 255
+        all_labels.append(label)
+    return np.stack(all_labels, axis=-1)
+
 
 def mask_label_overlay(mask, label_image, thresh=0.1):
     true_positives = np.logical_and(mask[..., 0] > thresh, label_image > 0)
@@ -204,11 +223,11 @@ def mask_label_overlay(mask, label_image, thresh=0.1):
     return rgb
 # %%
 with PdfPages("lesion_segmentation_reference.pdf") as pdf:
-    for idx in tqdm(np.argsort(quac_scores)[::-1][:50]):
+    for idx in tqdm(np.argsort(quac_scores)[::-1][:10]):
         attr = report.load_attribution(idx)
         image = Image.open(report.paths[idx])
         cf_image = Image.open(report.target_paths[idx])
-        # TODO get the label image
+        # Get the label image
         label_image = load_labels(report.paths[idx])
         x = viz_transform(image)
         x_t = viz_transform(cf_image)
@@ -230,7 +249,6 @@ with PdfPages("lesion_segmentation_reference.pdf") as pdf:
         target_pred = report.target_predictions[idx]
         hybrid_pred = classifier(normalized_hybrid.unsqueeze(0)).softmax(1).detach().cpu().numpy().squeeze()
 
-        
         headers[0].barh(range(len(pred)), pred)
         headers[0].set_xlim(0, 1)
         headers[0].set_yticks(range(len(pred)))
@@ -254,6 +272,45 @@ with PdfPages("lesion_segmentation_reference.pdf") as pdf:
         headers[3].set_visible(False)
         fig.tight_layout()
         pdf.savefig(fig)
-        plt.clf()
+        plt.close(fig)
 
-    # %%
+# %%
+# Here we calculate the AP score for a set of images
+# I want to see if the AP score correlates with the QUAC score
+
+from sklearn.metrics import average_precision_score
+from scipy.special import softmax
+
+label_types = ["EX", "HE", "MA", "SE"]
+
+ap_scores = {label: [] for label in label_types}
+indices = {label: [] for label in label_types}
+for idx in tqdm(range(len(quac_scores))): # quac_scores[:10]):
+    attr = report.load_attribution(idx)
+    # image = Image.open(report.paths[idx])
+    # cf_image = Image.open(report.target_paths[idx])
+    # Get the label image
+    # label_image = (load_labels(report.paths[idx]) > 0).astype(np.uint8)
+    label_image = load_labels_separate(report.paths[idx])
+    # x = viz_transform(image)
+    # x_t = viz_transform(cf_image)
+
+    thr = report.get_optimal_threshold(idx)
+    mask, mask_size = evaluator.create_mask(attr, thr)
+    mask = mask.mean(axis=0)
+    # mask = softmax(attr).mean(axis=0)
+
+    # Get the AP given the mask and labels
+    for i, label in enumerate(label_types):
+        if np.any(label_image[..., i]):
+            ap = average_precision_score(label_image[..., i].flatten(), mask.flatten())
+            ap_scores[label].append(ap)
+            indices[label].append(idx)
+
+# %%
+for label, ap in ap_scores.items():
+    plt.scatter(np.array(quac_scores)[indices[label]], ap, label=label)
+plt.xlabel("QUAC Score")
+plt.ylabel("Average Precision, all labels")
+plt.legend()
+# %%
