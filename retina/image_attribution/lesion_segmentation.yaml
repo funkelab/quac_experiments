@@ -1,0 +1,5 @@
+source_directory: "/nrs/funke/adjavond/data/retina/DDR-dataset/lesion_segmentation/train/image"
+counterfactual_directory: "/nrs/funke/adjavond/data/retina/DDR-dataset/lesion_segmentation/train/counterfactual/reference/"
+attribution_directory: "/nrs/funke/adjavond/data/retina/DDR-dataset/lesion_segmentation/train/attribution"
+report_directory: "/nrs/funke/adjavond/data/retina/DDR-dataset/lesion_segmentation/train/reports"
+classifier_checkpoint: "/nrs/funke/adjavond/projects/quac/retina-ddr-classification/final_model.pt"
