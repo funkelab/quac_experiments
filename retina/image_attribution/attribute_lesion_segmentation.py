@@ -28,13 +28,21 @@ classifier = load_classifier(
 # `AttributionIO` takes in a dictionary of attributions and an output directory.
 # %% Creating the attributions
 # Defining attributions
-from quac.attribution import DDeepLift, DIntegratedGradients, AttributionIO
+from quac.attribution import (
+    DDeepLift, 
+    DIntegratedGradients, 
+    AttributionIO, 
+    VanillaDeepLift, 
+    VanillaIntegratedGradient
+)
 from torchvision import transforms
 
 attributor = AttributionIO(
     attributions={
         "discriminative_deeplift": DDeepLift(classifier),
         "discriminative_ig": DIntegratedGradients(classifier),
+        "vanilla_deeplift": VanillaDeepLift(classifier),
+        "vanilla_ig": VanillaIntegratedGradient(classifier),
     },
     output_directory=metadata["attribution_directory"],
 )

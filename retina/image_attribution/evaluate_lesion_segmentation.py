@@ -12,9 +12,14 @@ metadata = safe_load(open("lesion_segmentation.yaml"))
 # We will be running on the DeepLift attributions, so we will need to change the metadata.
 # To run this on the other attributions we generated, just change the "attribution_method" below.
 
-# %% Choose the attribution methoe
-attribution_method = "discriminative_deeplift"
+# %% Choose the attribution method
+# attribution_method = "discriminative_deeplift"
+# attribution_method = "vanilla_deeplift"
+attribution_method = "discriminative_ig"
+# attribution_method = "vanilla_ig"
+
 metadata["attribution_directory"] = metadata["attribution_directory"] + "/" + attribution_method
+metadata["report_directory"] = metadata["report_directory"] + "/" + attribution_method
 
 # %% [markdown]
 # ## Loading the classifier
