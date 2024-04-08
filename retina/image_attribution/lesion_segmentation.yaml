@@ -3,3 +3,4 @@ counterfactual_directory: "/nrs/funke/adjavond/data/retina/DDR-dataset/lesion_se
 attribution_directory: "/nrs/funke/adjavond/data/retina/DDR-dataset/lesion_segmentation/train/attribution"
 report_directory: "/nrs/funke/adjavond/data/retina/DDR-dataset/lesion_segmentation/train/reports"
 classifier_checkpoint: "/nrs/funke/adjavond/projects/quac/retina-ddr-classification/final_model.pt"
+figures_directory: "/groups/funke/home/adjavond/workspace/projects/QuAC/paper/quac_paper/figures/retina"
