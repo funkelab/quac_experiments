@@ -18,6 +18,8 @@ authors = [
 dynamic = ["version"]
 dependencies = [
   "matplotlib",
+  "GitPython",
+  "pydantic"
 ]
 
 [project.optional-dependencies]

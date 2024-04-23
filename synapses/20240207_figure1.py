@@ -42,11 +42,50 @@ colors = [
 
 class_names = ["GABA", "ACh", "Glut", "Ser", "Oct", "Dop"]
 
+# %% [markdown] QuAC scores for the population
+# Plotting the QuAC scores for the different attribution methods.
+
+
 
 # %% Necessary setup
 load_dir = "/nrs/funke/adjavond/projects/quac/20240201"
-report = Report(load_dir, name="discriminative_ig")
-report.load( Path(load_dir) / f"discriminative_ig.json")
+
+reports = {
+    method: Report(name=method)
+    for method in ["discriminative_ig", "discriminative_dl", "discriminative_ingrad"]
+}
+
+for method in reports:
+    reports[method].load( Path(load_dir) / f"{method}.json")
+
+# %% Plotting
+fig, ax = plt.subplots(1, 1, figsize=(5, 5))
+for method, report in reports.items():
+    report.plot_curve(ax)
+plt.legend()
+plt.show()
+
+# %% Store the report outputs as CSV
+import pandas as pd
+
+columns = []
+data = []
+for method, report in reports.items():
+    mean, std = report.get_curve()
+    data.append(mean)
+    data.append(std)
+
+    columns.append(f"{method}_mean")
+    columns.append(f"{method}_std")
+
+# %%
+df = pd.DataFrame(np.array(data).T, columns=columns)
+df.to_csv("curves.csv", index=False)
+# %% [markdown] Load the report from Integrated Gradients
+# Choosing the best report to use for the rest of the experiment
+
+# %%
+report = reports["discriminative_ig"]
 quac_scores = report.compute_scores()
 
 # %%
@@ -168,8 +207,5 @@ def do_the_thing(report, index, order, evaluator, save_dir, source, target):
 # %%
 for i, idx in enumerate(index):
     do_the_thing(report, idx, i, evaluator, save_dir, 0, 1)
-
-# %%
-index
 
 # %%

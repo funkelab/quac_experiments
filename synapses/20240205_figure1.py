@@ -8,7 +8,7 @@ from quac.report import Report
 import cv2
 from funlib.learn.torch.models import Vgg2D
 import torch
-from quac.data import PairedImageFolders
+from quac.data import PairedImageDataset
 from torchvision import transforms
 from skimage import measure
 
@@ -31,7 +31,7 @@ transform = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize((0.5,), (0.5,))
 ])
-dataset = PairedImageFolders(
+dataset = PairedImageDataset(
 	"/nrs/funke/adjavond/data/synapses/test/", 
 	"/nrs/funke/adjavond/data/synapses/counterfactuals/stargan_invariance_v0/test/",
     transform=transform

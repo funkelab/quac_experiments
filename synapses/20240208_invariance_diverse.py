@@ -2,7 +2,7 @@
 from funlib.learn.torch.models import Vgg2D
 import torch
 from tqdm import tqdm
-from quac.data import PairedImageFolders
+from quac.data import PairedImageDataset
 from torchvision import transforms
 
 # %% Classifier
@@ -17,7 +17,7 @@ transform = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize((0.5,), (0.5,))
 ])
-dataset = PairedImageFolders(
+dataset = PairedImageDataset(
 	"/nrs/funke/adjavond/data/synapses/val/", 
 	"/nrs/funke/adjavond/data/synapses/counterfactuals/stargan_invariance_v0_diverse/val/",
     transform=transform

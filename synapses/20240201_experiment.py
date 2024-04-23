@@ -1,7 +1,7 @@
 # %%
 from funlib.learn.torch.models import Vgg2D
 from matplotlib import pyplot as plt
-from quac.data import PairedImageFolders
+from quac.data import PairedImageDataset
 from quac.attribution import DIntegratedGradients, DDeepLift, DInGrad
 from quac.evaluation import Evaluator
 from quac.report import Report
@@ -26,7 +26,7 @@ transform = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize((0.5,), (0.5,))
 ])
-dataset = PairedImageFolders(
+dataset = PairedImageDataset(
 	"/nrs/funke/adjavond/data/synapses/test/", 
 	"/nrs/funke/adjavond/data/synapses/counterfactuals/stargan_invariance_v0/test/",
     transform=transform
