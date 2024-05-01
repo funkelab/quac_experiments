@@ -4,6 +4,7 @@ import git
 from quac.training.data_loader import TrainingData, ValidationData
 from quac.training.stargan import build_model
 from quac.training.solver import Solver
+from quac.training.logging import Logger
 import torch
 import typer
 import wandb
@@ -18,17 +19,11 @@ def main(config_file: str = "config.yaml"):
         config = yaml.safe_load(f)
     experiment = ExperimentConfig(**config)
 
-    resume = experiment.run.resume_iter > 0
-
-    # run = None
-
-    run = wandb.init(
-        project=experiment.project,
-        config=experiment.model_dump(),
-        name=experiment.name,
-        notes=experiment.notes,
-        tags=experiment.tags,
-        resume=resume,
+    logger = Logger.create(
+        experiment.log_type,
+        hparams=experiment.model_dump(),
+        resume_iter=experiment.run.resume_iter,
+        **experiment.log.model_dump(),
     )
 
     ## Defining the dataset
@@ -38,7 +33,7 @@ def main(config_file: str = "config.yaml"):
     nets, nets_ema = build_model(**experiment.model.model_dump())
 
     ## Defining the Solver
-    solver = Solver(nets, nets_ema, **experiment.solver.model_dump(), run=run)
+    solver = Solver(nets, nets_ema, **experiment.solver.model_dump(), run=logger)
 
     # Setup classifier and data for validation
     val_dataset = ValidationData(**experiment.validation_data.model_dump())
