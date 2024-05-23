@@ -1,7 +1,7 @@
 log_type: "wandb"
 
 log: 
-  project: "fictus-stargan"
+  project: "stargan-test"
   name: "stargan_test"
   notes: "Stargan dev testing" 
   tags: 

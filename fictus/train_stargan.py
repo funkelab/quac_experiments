@@ -7,7 +7,6 @@ from quac.training.solver import Solver
 from quac.training.logging import Logger
 import torch
 import typer
-import wandb
 import warnings
 import yaml
 
