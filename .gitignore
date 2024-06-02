@@ -8,3 +8,5 @@ example/
 **scratch.py
 **/*secret*
 fictus/results/
+zebrafish
+kenyon_cells/worker_logs
