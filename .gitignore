@@ -6,3 +6,5 @@ example/
 **/output*/
 **/checkpoints/
 **scratch.py
+**/*secret*
+fictus/results/
