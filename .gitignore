@@ -7,6 +7,7 @@ example/
 **/checkpoints/
 **scratch.py
 **/*secret*
+**/*.csv
 fictus/results/
 zebrafish
 kenyon_cells/worker_logs
