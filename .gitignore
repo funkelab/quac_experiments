@@ -10,3 +10,5 @@ example/
 fictus/results/
 zebrafish
 kenyon_cells/worker_logs
+kenyon_cells/results/
+synapses/refactored/results/

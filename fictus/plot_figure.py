@@ -11,8 +11,10 @@ from quac.report import Report
 reports = {
     method: Report(name=method)
     for method in [
-        "deeplift",
-        "ig",
+        "DDeepLift",
+        "DIntegratedGradients",
+        "VanillaDeepLift",
+        "VanillaIntegratedGradients",
     ]
 }
 
@@ -22,12 +24,27 @@ for method, report in reports.items():
 # %% Plot the curves
 import matplotlib.pyplot as plt
 
-fig, ax = plt.subplots()
-for method, report in reports.items():
-    report.plot_curve(ax=ax)
-# Add the legend
-plt.legend()
-plt.show()
+# fig, ax = plt.subplots()
+# for method, report in reports.items():
+#     report.plot_curve(ax=ax)
+# # Add the legend
+# plt.legend()
+# plt.show()
+
+# %% Save the curve data
+from tqdm import tqdm
+import pandas as pd
+
+for method, report in tqdm(reports.items(), total=len(reports)):
+    median, p25, p75 = report.get_curve()
+    data = {
+        "median": median,
+        "p25": p25,
+        "p75": p75,
+    }
+    df = pd.DataFrame(data)
+    df.to_csv(f"results/{method}_curve.csv", index=False)
+
 
 # %%
 # TODO fill in here with the best of the methods

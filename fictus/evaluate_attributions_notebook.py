@@ -30,7 +30,7 @@ classifier = ClassifierWrapper(
 classifier.eval()
 
 # %%
-method = "ig"
+method = "VanillaIntegratedGradients"
 source_dir = metadata["validation_data"]["source"]
 counterfactual_dir = Path(metadata["solver"]["root_dir"]) / f"counterfactuals/{kind}/"
 attribution_dir = Path(metadata["solver"]["root_dir"]) / f"attributions/{kind}/{method}"
@@ -47,30 +47,28 @@ evaluator = Evaluator(
 )
 
 # %% Check the confusion matrix for the counterfactuals
-cf_confusion_matrix = evaluator.classification_report(
-    data="counterfactuals",  # this is the default
-    return_classification=False,
-    print_report=True,
-)
+# cf_confusion_matrix = evaluator.classification_report(
+#     data="counterfactuals",  # this is the default
+#     return_classification=False,
+#     print_report=True,
+# )
 
-disp = ConfusionMatrixDisplay(
-    confusion_matrix=cf_confusion_matrix,
-).plot()
-plt.show()
+# disp = ConfusionMatrixDisplay(
+#     confusion_matrix=cf_confusion_matrix,
+# ).plot()
+# plt.show()
 
-# %% Check the confusion matrix for the source
-source_confusion_matrix = evaluator.classification_report(
-    data="source",
-    return_classification=False,
-    print_report=True,
-)
-# %%
-disp = ConfusionMatrixDisplay(
-    confusion_matrix=source_confusion_matrix, values_format=".4g"
-).plot()
-plt.show()
+# # %% Check the confusion matrix for the source
+# source_confusion_matrix = evaluator.classification_report(
+#     data="source",
+#     return_classification=False,
+#     print_report=True,
+# )
+# disp = ConfusionMatrixDisplay(confusion_matrix=source_confusion_matrix).plot()
+# plt.show()
 # %% Run QuAC evaluation on your attribution and store a report
 report = evaluator.quantify(processor=Processor())
+# %%
 # The report will be stored based on the processor's name, which is "default" by default
 report_dir = Path(metadata["solver"]["root_dir"]) / f"reports/{kind}/{method}"
 report.store(report_dir)

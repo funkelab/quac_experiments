@@ -1,5 +1,11 @@
 # %% Setup
-from quac.attribution import DDeepLift, DIntegratedGradients, AttributionIO
+from quac.attribution import (
+    DDeepLift,
+    DIntegratedGradients,
+    AttributionIO,
+    VanillaDeepLift,
+    VanillaIntegratedGradients,
+)
 from quac.training.classification import ClassifierWrapper
 from pathlib import Path
 import torch
@@ -33,8 +39,10 @@ attribution_directory = Path(metadata["solver"]["root_dir"]) / f"attributions/{k
 # Create the Attribution objects
 attributor = AttributionIO(
     attributions={
-        "deeplift": DDeepLift(classifier),
-        "ig": DIntegratedGradients(classifier),
+        "DDeepLift": DDeepLift(classifier),
+        "DIntegratedGradients": DIntegratedGradients(classifier),
+        "VanillaDeepLift": VanillaDeepLift(classifier),
+        "VanillaIntegratedGradients": VanillaIntegratedGradients(classifier),
     },
     output_directory=attribution_directory,
 )
