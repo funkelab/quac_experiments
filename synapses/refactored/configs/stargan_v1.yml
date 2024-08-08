@@ -1,0 +1,54 @@
+log:
+  project: "synapses-stargan"
+  name: "stargan_v1"
+  notes: "Stargan training on synapse dataset with changes to match the original StarGAN implementation more closely."
+  tags: 
+    - synapses
+    - stargan
+    - training
+    - quac
+
+data: 
+  source: "/nrs/funke/adjavond/data/synapses/train"
+  reference: "/nrs/funke/adjavond/data/synapses/train"
+  img_size: 128
+  batch_size: 16
+  num_workers: 12
+  mean: null
+  std: null
+  grayscale: true
+  rand_crop_prob: 0.0
+
+validation_data: 
+  source: "/nrs/funke/adjavond/data/synapses/val"
+  reference: "/nrs/funke/adjavond/data/synapses/val"
+  img_size: 128
+  batch_size: 16
+  num_workers: 12
+  mean: null
+  std: null
+  grayscale: true
+
+model: 
+  img_size: 128
+  style_dim: 64
+  latent_dim: 16
+  num_domains: 6
+  input_dim: 1
+  final_activation: "sigmoid"
+
+solver:
+  root_dir: "/nrs/funke/adjavond/projects/quac/synapses_refactor/stargan_v1/"
+
+validation_config: 
+  classifier_checkpoint: "/nrs/funke/adjavond/projects/quac/synapse-classification/final_model.pt"
+  mean: 0.5
+  std: 0.5
+  assume_normalized: true
+
+run: 
+  log_every: 100
+  resume_iter: 0
+  total_iters: 100000
+  save_every: 1000
+  eval_every: 1000
