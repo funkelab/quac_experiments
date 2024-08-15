@@ -89,11 +89,17 @@ def run_worker(
 
         counterfactuals = da.zeros_like(zarr_dataset)
         cf_preds = da.zeros_like(preds)
+        is_valid = da.ones(len(zarr_dataset), dtype=bool)
 
         # Generate counterfactuals -- note that this also creates counterfactuals for the images of the same class
         for i, (x, y) in tqdm(
             enumerate(zip(zarr_dataset, preds)), total=len(zarr_dataset), desc=name
         ):
+            if y == ycf:
+                # SKIP THIS in evaluation
+                is_valid[i] = False
+            # NOTE: Normally, we would not have to create the counterfactual images in this case.
+            # Here, however, we do it anyways as an experiment.
             xcf, ycf = get_counterfactual(
                 classifier,
                 inference_model,
@@ -112,6 +118,7 @@ def run_worker(
         logging.info(f"Saving counterfactuals for {name}")
         counterfactuals.to_zarr(zarr_path, component=f"counterfactuals/{name}")
         cf_preds.to_zarr(zarr_path, component=f"counterfactual_predictions/{name}")
+        is_valid.to_zarr(zarr_path, component=f"is_valid/{name}")
 
 
 def check_exists(zarr_path, cell_id):
@@ -133,3 +140,5 @@ if __name__ == "__main__":
         "/nrs/funke/adjavond/projects/quac/synapses_onzarr/20240808_results_test.zarr"
     )
     run_worker(zarr_path)
+
+# %%
