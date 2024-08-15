@@ -31,15 +31,19 @@ def run_worker(result_path, target_class):
     # Load the data
     images = zfile["images"]
     predictions = zfile["predictions"]
+    classes = sorted(list(zfile["counterfactuals"].array_keys()))
+    target_class_index = classes.index(target_class)
     counterfactuals = zfile[f"counterfactuals/{target_class}"]
     counterfactual_predictions = zfile[f"counterfactual_predictions/{target_class}"]
+    is_valid = zfile[f"is_valid/{target_class}"]
     # Check validity of the data
     assert (
         len(images)
         == len(predictions)
         == len(counterfactuals)
         == len(counterfactual_predictions)
-    ), f"The data is not valid. Lengths: {len(images)}, {len(predictions)}, {len(counterfactuals)}, {len(counterfactual_predictions)}"
+        == len(is_valid)
+    ), f"The data is not valid. Lengths: {len(images)}, {len(predictions)}, {len(counterfactuals)}, {len(counterfactual_predictions)}, {len(is_valid)}"
 
     # Create the attribution objects
     attributions = {
@@ -52,12 +56,13 @@ def run_worker(result_path, target_class):
     # Run the attributions
     results = {attr_name: [] for attr_name in attributions.keys()}
 
-    for image, counterfactual, prediction in tqdm(
-        zip(images, counterfactuals, predictions),
+    for image, counterfactual, prediction, valid in tqdm(
+        zip(images, counterfactuals, predictions, is_valid),
         total=len(images),
     ):
+        # FIXME: Normally, we would check the validity before running the attributions.
+        # We will still run the attribution on non=valid cases as an experiment
         source_class_index = int(prediction.argmax())
-        target_class_index = 1  # This is the target, acetylcholine
 
         for attr_name, attribution in attributions.items():
             attr = attribution.attribute(
@@ -94,7 +99,6 @@ if __name__ == "__main__":
     zarr_path = (
         "/nrs/funke/adjavond/projects/quac/synapses_onzarr/20240808_results_test.zarr"
     )
-    target_class = "0_gaba"
     for target_class in [
         "0_gaba",
         "1_acetylcholine",
