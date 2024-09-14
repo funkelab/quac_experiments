@@ -68,3 +68,23 @@ overall_cm = overall_cm / overall_cm.sum(axis=1)[:, np.newaxis]
 ax = sns.heatmap(overall_cm, annot=True, xticklabels=classes, yticklabels=classes)
 ax.set_xlabel("Predicted")
 ax.set_ylabel("Target")
+
+# %% Source confusion matrix
+predictions = results["predictions"][:]
+source_cm = confusion_matrix(labels, predictions.argmax(axis=1), normalize="true")
+
+# Plot the source confusion matrix
+ax = sns.heatmap(source_cm, annot=True, xticklabels=classes, yticklabels=classes)
+ax.set_xlabel("Predicted")
+ax.set_ylabel("True")
+
+# %% Store the overall confusion matrix in the format used in the paper
+# This is a CSV file with three columns: label,prediction,value
+# The value is the percentage of the confusion matrix
+with open("paper_results/cf_confusion_matrix.csv", "w") as f:
+    f.write("label,prediction,value\n")
+    for pred in range(6):
+        for lbl in range(6):
+            f.write(f"{lbl},{pred},{overall_cm[lbl, pred]}\n")
+
+# %%
