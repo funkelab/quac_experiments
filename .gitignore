@@ -12,4 +12,5 @@ fictus/results/
 zebrafish
 kenyon_cells/worker_logs
 kenyon_cells/results/
+kenyon_cells/visualizations/
 synapses/refactored/results/
