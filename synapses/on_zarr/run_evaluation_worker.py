@@ -1,8 +1,9 @@
+import logging
 import numpy as np
 import pandas as pd
 from scipy.special import softmax
-import sys
 import torch
+from tqdm import tqdm
 import zarr
 
 from quac.evaluation import BaseEvaluator, Processor
@@ -61,11 +62,13 @@ def run_worker(zarr_path):
         optimal_masks = []
         hybrids = []
         inverse_hybrids = []
+        hybrid_classifications = []
+        inverse_hybrid_classifications = []
         for i, sample in tqdm(enumerate(dataset), desc="Create masks and hybrids"):
             attribution = sample.attribution
             image = sample.image
             counterfactual = sample.counterfactual
-            mask = processor.create_mask(attribution, optimal_thresholds[i])
+            mask, _ = processor.create_mask(attribution, optimal_thresholds[i])
             optimal_masks.append(mask)
             # Create images
             # Hybrid = mask *xcf + (1-mask)*x --> A majority of pixels come from image, but has the same class as xcf
@@ -73,45 +76,48 @@ def run_worker(zarr_path):
             # Store the hybrids in the zarr file
             hybrid = (1 - mask) * image + mask * counterfactual
             inverse_hybrid = mask * image + (1 - mask) * counterfactual
+
+            logging.info("hybrid shape: %s", hybrid.shape)
+            logging.info("inverse_hybrid shape: %s", inverse_hybrid.shape)
+            hybrid_classififcation = softmax(
+                classifier(torch.from_numpy(hybrid[None, ...]).float().to(device))
+                .cpu()
+                .detach()
+                .numpy(),
+                axis=1,
+            )
+            inverse_hybrid_classification = softmax(
+                classifier(
+                    torch.from_numpy(inverse_hybrid[None, ...]).float().to(device)
+                )
+                .cpu()
+                .detach()
+                .numpy(),
+                axis=1,
+            )
             hybrids.append(hybrid)
             inverse_hybrids.append(inverse_hybrid)
+            hybrid_classifications.append(hybrid_classififcation)
+            inverse_hybrid_classifications.append(inverse_hybrid_classification)
 
-        optimal_masks = np.array(optimal_masks)
-        hybrids = np.array(hybrids)
-        inverse_hybrids = np.array(inverse_hybrids)
-        #
         this_evaluation.create_dataset(
-            "optimal_masks", data=optimal_masks, chunks=images.chunks
+            "optimal_masks", data=np.array(optimal_masks), chunks=images.chunks
         )
-        this_evaluation.create_dataset("hybrids", data=hybrids, chunks=images.chunks)
-        #
         this_evaluation.create_dataset(
-            "inverse_hybrids", data=inverse_hybrids, chunks=images.chunks
+            "hybrids", data=np.array(hybrids), chunks=images.chunks
         )
-        # Predict on the hybrids and store the results in the zarr file
-        hybrid_classification = softmax(
-            classifier(torch.from_numpy(hybrids).float().to(device))
-            .cpu()
-            .detach()
-            .numpy(),
-            axis=1,
+        this_evaluation.create_dataset(
+            "inverse_hybrids", data=np.array(inverse_hybrids), chunks=images.chunks
         )
         prediction_chunks = zarr_file["predictions"].chunks
         this_evaluation.create_dataset(
             "hybrid_classification",
-            data=hybrid_classification,
+            data=np.array(hybrid_classifications),
             chunks=prediction_chunks,
-        )
-        inverse_hybrid_classification = softmax(
-            classifier(torch.from_numpy(inverse_hybrids).float().to(device))
-            .cpu()
-            .detach()
-            .numpy(),
-            axis=1,
         )
         this_evaluation.create_dataset(
             "inverse_hybrid_classification",
-            data=inverse_hybrid_classification,
+            data=np.array(inverse_hybrid_classifications),
             chunks=prediction_chunks,
         )
         # Store the scores
@@ -123,6 +129,7 @@ def run_worker(zarr_path):
 
 
 if __name__ == "__main__":
+    # logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
     zarr_path = (
         "/nrs/funke/adjavond/projects/quac/synapses_onzarr/20240808_results_test.zarr"
     )
