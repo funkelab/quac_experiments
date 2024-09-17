@@ -14,7 +14,7 @@ body {
     margin-top: 70px;
     /* Adjust this value based on the height of the header */
     position: relative;
-    max-height: 80vh;
+    max-height: 100vh;
     overflow-y: auto;
 }
 
@@ -60,7 +60,11 @@ thead th {
     margin: 30px;
 }
 
+.header button {
+    margin: 30px;
+}
+
 img {
-    width: 1000px;
+    width: 100%;
     height: auto;
 }
