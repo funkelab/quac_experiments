@@ -39,6 +39,7 @@ sns.despine()
 # Same thing, but without any of the samples that need review
 # Drop the samples that have "Needs review" as True
 df = df[df["Needs review"] == False]
+print(len(df))
 
 # Count the number of True annotations for each column
 counts = df.sum() / len(df)

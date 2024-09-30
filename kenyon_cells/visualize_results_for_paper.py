@@ -179,7 +179,7 @@ def visualize_one_neuron(
                 target=1,
                 mask=optimal_masks[index_to_show],
             )
-            fig.suptitle(f"Synapse {index_to_show}, QuAC score: {row['score']}")
+            # fig.suptitle(f"Synapse {index_to_show}, QuAC score: {row['score']}")
             plt.tight_layout()
 
             # Add the figure to the PDF
@@ -194,11 +194,11 @@ def visualize_one_neuron(
 # %%
 from pathlib import Path
 
-save_dir = Path("visualizations")
-save_dir.mkdir(exist_ok=True)
+# save_dir = Path("webapp_visualizations")
+# save_dir.mkdir(exist_ok=True)
 
-for neuron_id in top_neurons.pre.values:
-    visualize_one_neuron(neuron_id, save_dir)
+# for neuron_id in top_neurons.pre.values:
+#     visualize_one_neuron(neuron_id, save_dir)
 
 
 # %% [markdown]
@@ -272,7 +272,10 @@ def visualize_one_neuron_interactive(
             target=1,
             mask=optimal_masks[index_to_show],
         )
-        fig.suptitle(f"Synapse {index_to_show}, QuAC score: {row['score']}")
+        for ax in axes:
+            # Remove the titles from the axes
+            ax.set_title("")
+        # fig.suptitle(f"Synapse {index_to_show}, QuAC score: {row['score']}")
         plt.tight_layout()
 
         # Add the figure to the PDF
@@ -305,10 +308,10 @@ def visualize_one_neuron_interactive(
 
 # %%
 M = 10
-web_app_assets = Path("webapp/assets/visualizations")
+web_app_assets = Path("webapp_visualizations")
 web_app_assets.mkdir(exist_ok=True, parents=True)
 
-state_file = Path("webapp/state.json")
+state_file = Path("dummy_state.json")
 
 for neuron_id in top_neurons.pre.values:
     if not state_file.exists():
