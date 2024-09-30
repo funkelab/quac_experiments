@@ -2,6 +2,7 @@
 import zarr
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 # %% Loading the data
 results = zarr.open(
@@ -113,7 +114,7 @@ for (src, target), group in mapping.groupby(["source", "target"]):
     # Counterfactual (formerly hybrid)
     axs[1].imshow(hybrid.squeeze(), cmap="gray", vmin=-1, vmax=1)
     # Draw a contour plot of the mask
-    threshold = 0.1
+    threshold = 0.5
     axs[1].contour(mask.squeeze(), levels=[threshold], colors="magenta", linewidths=2)
     # Slightly darken the areas outside of the mask
     plot_mask = mask.squeeze().copy()

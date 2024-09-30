@@ -1,0 +1,13 @@
+{
+    "Wider cleft": "the cleft got brighter/increase in the direction of the synapse (pre-to-post).\nGenerally, this means that there was just a line, and then a visible cleft was created.",
+    "Longer cleft": "OR More post-synaptic partners. The cleft size increased perpendicular to the synapse (so along, rather than across).\nThis means the visible cleft is now touching more post-synaptic partners.",
+    "Darker PSDs": "The post synaptic densities either appeared or increased in size.",
+    "More vesicle": "Darker spots/added vesicles/larger vesicles.\nEither barely visible spots came into focus/darkened or vesicles were created from nothing.\nThis annotation occurs on the pre-synaptic side.",
+    "Cleared DCV": "A larger dark vesicle was turned lighter, emptied, or burst/split. This annotation is not used for smaller vesicles.",
+    "Removed large vesicle": "A larger (clear) vesicle was removed/reduced in size",
+    "Added spots": "spot-like (smaller than vesicles) structures appear, generally around the T-bar area or nea the cleft.\nThese spots can appear on the pre- or post-synaptic side",
+    "Spots removed": "spot-like structures disappear from the cleft area, or are transformed into PSDs/T-Bar.",
+    "T-Bar modified": "either removed, or made lighter",
+    "T-Bar added": "if not visible before, or increased visibly in size.",
+    "Needs review": "A synapse needs re-annotating using video/animation/gif"
+}

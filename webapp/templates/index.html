@@ -28,7 +28,7 @@
                     {% for item, states in items.items() %}
                     <tr>
                         <td>
-                            <img src="{{ url_for('serve_image', filename=item) }}" alt="{{ item }}"><br>{{ item }}
+                            <img src="{{ url_for('serve_image', filename=item) }}" alt="{{ item }}">
                         </td>
                         {% for state in states %}
                         <td>
