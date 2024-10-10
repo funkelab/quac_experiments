@@ -1,9 +1,35 @@
 # %% Setup
 import yaml
+from tqdm import tqdm
+import pandas as pd
+import numpy as np
+from skimage import measure
+from skimage.morphology import binary_dilation
 
+# %%
 metadata = yaml.safe_load(open("configs/stargan.yml"))
 kind = "latent"
 metadata["report_directory"] = metadata["solver"]["root_dir"] + f"/reports/{kind}"
+# %% [markdown]
+# We will want to get the classification of the hybrid image.
+# To do this, we need to load the classifier.
+# %%
+import torch
+from quac.training.classification import ClassifierWrapper
+from pathlib import Path
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print("Loading classifier")
+classifier_checkpoint = Path(metadata["validation_config"]["classifier_checkpoint"])
+mean = metadata["validation_config"]["mean"]
+std = metadata["validation_config"]["std"]
+classifier = ClassifierWrapper(
+    classifier_checkpoint,
+    mean=mean,
+    std=std,
+    assume_normalized=True,  # We are going to be putting data between 0 and 1 with a transform
+).to(device)
+classifier.eval()
 
 # %%
 from quac.report import Report
@@ -32,34 +58,42 @@ import matplotlib.pyplot as plt
 # plt.show()
 
 # %% Save the curve data
-from tqdm import tqdm
-import pandas as pd
 
-for method, report in tqdm(reports.items(), total=len(reports)):
-    median, p25, p75 = report.get_curve()
-    data = {
-        "median": median,
-        "p25": p25,
-        "p75": p75,
-    }
-    df = pd.DataFrame(data)
-    df.to_csv(f"results/{method}_curve.csv", index=False)
+# for method, report in tqdm(reports.items(), total=len(reports)):
+#     median, p25, p75 = report.get_curve()
+#     data = {
+#         "median": median,
+#         "p25": p25,
+#         "p75": p75,
+#     }
+#     df = pd.DataFrame(data)
+#     df.to_csv(f"results/{method}_curve.csv", index=False)
 
-
+# %% [markdown]
+# ## Choosing the best attribution method for each sample
+# While one attribution method may be better than another on average, it is possible that the best method for a given example is different.
+# Therefore, we will make a list of the best method for each example by comparing the quac scores.
+# %%
+quac_scores = pd.DataFrame(
+    {method: report.quac_scores for method, report in reports.items()}
+)
+# %%
+best_methods = quac_scores.idxmax(axis=1)
+best_quac_scores = quac_scores.max(axis=1)
 # %%
 # TODO fill in here with the best of the methods
-report = reports["ig"]
+# report = reports["ig"]
 # %% [markdown]
 # ## Choosing the best example
 # Next we want to choose the best example, given the best method.
 # This is done by ordering the examples by the QuAC score, and then choosing the one with the highest score.
 #
 # %%
-import numpy as np
-
-order = np.argsort(report.quac_scores)[::-1]
+order = best_quac_scores[::-1].argsort()
 # %%
-idx = 200
+idx = 10
+# Get the corresponding report
+report = reports[best_methods[order[idx]]]
 # %% [markdown]
 # We will then load that example and its counterfactual from its path, and visualize it.
 # We also want to see the classification of both the original and the counterfactual.
@@ -86,34 +120,23 @@ attribution = np.load(attribution_path)
 # To do this, we will need to get the optimal threshold, and get the processor used for masking.
 
 # %% Getting the mask and hybrid
-from quac.evaluation import Processor
+from quac.evaluation import Processor, UnblurredProcessor
 
-thresh = report.get_optimal_threshold(order[idx])
-processor = Processor()
+gaussian_kernel_size = 11
+struc = 8
+thresh = report.optimal_thresholds()[order[idx]]
+print(thresh)
+processor = Processor(gaussian_kernel_size=gaussian_kernel_size, struc=struc)
+processor2 = UnblurredProcessor(struc=struc)
 
 mask, _ = processor.create_mask(attribution, thresh)
+simple_mask, _ = processor2.create_mask(attribution, thresh)
 rgb_mask = mask.transpose(1, 2, 0)
+# zero-out the green and blue channels
+rgb_mask[:, :, 1] = 0
+rgb_mask[:, :, 2] = 0
+simple_rgb_mask = simple_mask.transpose(1, 2, 0).astype(np.float32)
 hybrid = np.array(cf_image) / 255 * rgb_mask + np.array(image) / 255 * (1.0 - rgb_mask)
-# %% [markdown]
-# The final missing point is to get the classification of the hybrid image.
-# To do this, we need to load the classifier.
-# %%
-import torch
-from quac.training.classification import ClassifierWrapper
-from pathlib import Path
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print("Loading classifier")
-classifier_checkpoint = Path(metadata["validation_config"]["classifier_checkpoint"])
-mean = metadata["validation_config"]["mean"]
-std = metadata["validation_config"]["std"]
-classifier = ClassifierWrapper(
-    classifier_checkpoint,
-    mean=mean,
-    std=std,
-    assume_normalized=True,  # We are going to be putting data between 0 and 1 with a transform
-).to(device)
-classifier.eval()
 
 
 # %%
@@ -127,7 +150,7 @@ hybrid_prediction = softmax(classifier_output[0].detach().cpu().numpy())
 # %% [markdown]
 # ## Visualizing the results
 # %%
-fig, axes = plt.subplots(2, 4)
+fig, axes = plt.subplots(2, 5)
 axes[1, 0].imshow(image)
 axes[0, 0].bar(np.arange(len(prediction)), prediction)
 axes[1, 1].imshow(cf_image)
@@ -136,6 +159,8 @@ axes[0, 2].bar(np.arange(len(hybrid_prediction)), hybrid_prediction)
 axes[1, 2].imshow(hybrid)
 axes[1, 3].imshow(rgb_mask)
 axes[0, 3].axis("off")
+axes[0, 4].axis("off")
+axes[1, 4].imshow(simple_rgb_mask)
 fig.suptitle(f"QuAC Score: {report.quac_scores[order[idx]]}")
 plt.show()
 
@@ -146,7 +171,8 @@ plt.show()
 
 
 # %%
-def get_summary(report, idx, classifier, processor):
+def get_summary(reports, best_methods, idx, classifier, processor):
+    report = reports[best_methods[idx]]
     image_path, cf_path = report.paths[idx], report.target_paths[idx]
     image, cf_image = Image.open(image_path), Image.open(cf_path)
 
@@ -160,6 +186,8 @@ def get_summary(report, idx, classifier, processor):
     thresh = report.get_optimal_threshold(idx)
 
     mask, _ = processor.create_mask(attribution, thresh)
+    simple_mask, _ = processor2.create_mask(attribution, thresh)
+    simple_rgb_mask = simple_mask.transpose(1, 2, 0).astype(np.float32)
     rgb_mask = mask.transpose(1, 2, 0)
     hybrid = np.array(cf_image) / 255 * rgb_mask + np.array(image) / 255 * (
         1.0 - rgb_mask
@@ -175,14 +203,21 @@ def get_summary(report, idx, classifier, processor):
         cf_image,
         prediction,
         target_prediction,
-        rgb_mask,
+        simple_rgb_mask,
         hybrid,
         hybrid_prediction,
     )
 
 
 def plot_summary(
-    image, cf_image, prediction, target_prediction, rgb_mask, hybrid, hybrid_prediction
+    score,
+    image,
+    cf_image,
+    prediction,
+    target_prediction,
+    rgb_mask,
+    hybrid,
+    hybrid_prediction,
 ):
     fig, axes = plt.subplots(2, 4)
     axes[1, 0].imshow(image)
@@ -193,8 +228,30 @@ def plot_summary(
     axes[1, 2].imshow(hybrid)
     axes[1, 3].imshow(rgb_mask)
     axes[0, 3].axis("off")
-    fig.suptitle(f"QuAC Score: {report.quac_scores[order[idx]]}")
+    fig.suptitle(f"QuAC Score: {score}")
     plt.show()
+
+
+def save_mask_contour(mask, filepath, threshold=0.0, linewidth=3):
+    """
+    Takes a mask in the form of a numpy array with values from 0 to 1,
+    Gets the contour of the mask and saves it as a PNG image.
+    """
+    contour = np.zeros_like(mask)
+    contours = measure.find_contours(mask.squeeze(), threshold)
+
+    # Turn the contour into a binary mask
+    for contour_coords in contours:
+        contour_coords = np.round(contour_coords).astype(int)
+        contour[0, contour_coords[:, 0], contour_coords[:, 1]] = 1
+    # Dilate the contour linewidth times, then remove the interior
+    interior = mask > threshold
+    for _ in range(1, linewidth):
+        contour = binary_dilation(contour)
+    # Remove the interior from the contour
+    contour = contour & ~interior
+    pil_image = Image.fromarray((contour.squeeze() * 255).astype(np.uint8))
+    pil_image.save(filepath)
 
 
 def store_summary(
@@ -223,6 +280,14 @@ def store_summary(
     path.mkdir(parents=True, exist_ok=True)
     image.save(path / "image.png")
     cf_image.save(path / "cf_image.png")
+    # Mask as three separate images
+    for name, channel in zip(["red", "green", "blue"], rgb_mask.transpose(2, 0, 1)):
+        Image.fromarray((channel * 255).astype(np.uint8)).save(
+            path / f"mask_{name}.png"
+        )
+        # Get a contour as well
+        save_mask_contour(channel[None, ...], path / f"contour_{name}.png")
+
     Image.fromarray((rgb_mask * 255).astype(np.uint8)).save(path / "mask.png")
     Image.fromarray((hybrid * 255).astype(np.uint8)).save(path / "hybrid.png")
 
@@ -236,11 +301,14 @@ def store_summary(
 
 
 # %%
-import pandas as pd
+# Get the best examples, given the quac score from the best reports!
+# We can choose any report to give us the source and target labels and predictions, those are the same for all reports.
+report = reports["DIntegratedGradients"]
 
 df = pd.DataFrame(
     {
-        "QuAC Score": report.quac_scores,
+        "QuAC Score": best_quac_scores.values,
+        "Best Method": best_methods.values,
         "Source": report.labels,
         "Target": report.target_labels,
         "Source Pred": np.array(report.predictions).argmax(axis=1),
@@ -255,8 +323,8 @@ performance = df.groupby(["Source", "Target"])["QuAC Score"].mean().unstack()
 import seaborn as sns
 
 sns.heatmap(performance.reindex([0, 2, 1, 3]), annot=True)
-# %%
-sns.heatmap(performance, annot=True)
+# # %%
+# sns.heatmap(performance, annot=True)
 # %%
 
 # %% [markdown]
@@ -299,8 +367,9 @@ for idx, row in best_examples_df.iterrows():
         rgb_mask,
         hybrid,
         hybrid_prediction,
-    ) = get_summary(report, idx, classifier, processor)
+    ) = get_summary(reports, best_methods, idx, classifier, processor)
     # plot_summary(
+    #     row["QuAC Score"],
     #     image,
     #     cf_image,
     #     prediction,
@@ -320,5 +389,4 @@ for idx, row in best_examples_df.iterrows():
         hybrid_prediction,
         path,
     )
-
 # %%
