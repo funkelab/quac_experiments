@@ -1,6 +1,5 @@
 # %% Setup
 import yaml
-from tqdm import tqdm
 import pandas as pd
 import numpy as np
 from skimage import measure
@@ -123,7 +122,7 @@ attribution = np.load(attribution_path)
 from quac.evaluation import Processor, UnblurredProcessor
 
 gaussian_kernel_size = 11
-struc = 8
+struc = 10
 thresh = report.optimal_thresholds()[order[idx]]
 print(thresh)
 processor = Processor(gaussian_kernel_size=gaussian_kernel_size, struc=struc)
@@ -291,13 +290,19 @@ def store_summary(
     Image.fromarray((rgb_mask * 255).astype(np.uint8)).save(path / "mask.png")
     Image.fromarray((hybrid * 255).astype(np.uint8)).save(path / "hybrid.png")
 
-    pd.DataFrame(
+    # The format needs to be filename,A,B,C,D,style where A,B,C,D are the probabilities of each class and style is "image" for the image and "counterfactual" for the hybrid
+    # We do not save the "cf_image"
+    output = pd.DataFrame(
         {
-            "image.png": prediction,
-            "cf_image": target_prediction,
-            "hybrid.png": hybrid_prediction,
+            "filename": ["image.png", "hybrid.png"],
+            "A": [prediction[0], hybrid_prediction[0]],
+            "B": [prediction[1], hybrid_prediction[1]],
+            "C": [prediction[2], hybrid_prediction[2]],
+            "D": [prediction[3], hybrid_prediction[3]],
+            "style": ["image", "counterfactual"],
         }
-    ).to_csv(path / "predictions.csv")
+    )
+    output.to_csv(path / "predictions.csv", index=False)
 
 
 # %%
@@ -358,7 +363,7 @@ best_examples_df
 # Finally, let's plot the best examples.
 # %%
 for idx, row in best_examples_df.iterrows():
-    # print(f"Source: {row['Source']}, Target: {row['Target']}")
+    print(f"Source: {row['Source']}, Target: {row['Target']}")
     (
         image,
         cf_image,
@@ -378,7 +383,7 @@ for idx, row in best_examples_df.iterrows():
     #     hybrid,
     #     hybrid_prediction,
     # )
-    path = Path("best_examples") / f"{int(row['Source'])}_{int(row['Target'])}"
+    path = Path("results/best_examples") / f"{int(row['Source'])}_{int(row['Target'])}"
     store_summary(
         image,
         cf_image,
