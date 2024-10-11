@@ -1,8 +1,0 @@
-matplotlib
-pydantic
-seaborn
-tifffile
-torchmetrics
-tqdm
-typer
-wandb
