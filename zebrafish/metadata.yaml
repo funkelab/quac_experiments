@@ -1,0 +1,56 @@
+WT:
+  sample8:
+    file: stitched_ls2982+ls3070_0.0_0.0_0.0_4170x5290x6230_rotated_6230x5290x4170.zarr
+    xmin: 3372
+    xmax: 4869
+    ymin: 400
+    ymax: 2840
+    zmin: 2009
+    zmax: 3018
+
+  sample19: 
+    file: stitched_top_left_right_bottom_sample19_-2545.0_-1357.0_-10836.0_5097x4087x8547_rotated_8547x4087x5097.zarr
+    xmin: 4352
+    xmax: 6016
+    ymin: 912
+    ymax: 3272
+    zmin: 1915
+    zmax: 3365
+
+  sample27: 
+    file: stitched_s27_bot1_bot2_mid1_mid2_top_789.0_4111.0_15364.0_5672x4836x7037_rotated_7037x4836x5672.zarr
+    xmin: 4158
+    xmax: 5718
+    ymin: 1038
+    ymax: 2886
+    zmin: 2928
+    zmax: 4183
+
+
+Mutant:
+  sample9: 
+    file: stitched_ls2982+ls3070_0.0_0.0_0.0_5970x5177x7763_rotated_7763x5177x5970.zarr
+    xmin: 3366
+    xmax: 4842
+    ymin: 1770
+    ymax: 3858
+    zmin: 2770
+    zmax: 3919
+  
+  sample17: 
+    file: top_left_right_bottom_0.0_0.0_0.0_4419x5155x8555_rotated_8555x5155x4419.zarr
+    xmin: 2392
+    xmax: 4096
+    ymin: 1520
+    ymax: 3896
+    zmin: 1322
+    zmax: 2766
+
+  sample25: 
+    file: stitched_s25_bot_mid1_mid2_top1_top2_795.0_1324.0_17637.0_4882x4092x7037_rotated_7037x4092x4882.zarr
+    xmin: 3390
+    xmax: 5100
+    ymin: 1086
+    ymax: 2844
+    zmin: 2167
+    zmax: 3294

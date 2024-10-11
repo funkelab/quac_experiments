@@ -1,0 +1,19 @@
+WT:
+  sample13: 
+    file: stitched_top_middle_bottom_-1239.0_48.0_-11987.0_3882x3767x7764_rotated_7764x3767x3882.zarr
+    xmin: 3522
+    xmax: 5226
+    ymin: 960
+    ymax: 2868
+    zmin: 1581
+    zmax: 2653
+
+Mutant:
+  sample12:
+    file: stitched_top_middle_bottom_-3326.0_2380.0_22808.0_4348x3860x8371_rotated_8371x3860x4348.zarr
+    xmin: 3108
+    xmax: 5094
+    ymin: 1014
+    ymax: 2904
+    zmin: 1735
+    zmax: 2832

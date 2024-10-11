@@ -9,7 +9,8 @@ example/
 **/*secret*
 **/*.csv
 fictus/results/
-zebrafish
+zebrafish/worker_logs
+zebrafish/blind_test
 kenyon_cells/worker_logs
 kenyon_cells/results/
 kenyon_cells/visualizations/
