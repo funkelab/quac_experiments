@@ -17,8 +17,6 @@ import typer
 import wandb
 import yaml
 
-# TODO Make a Training Class
-
 
 def initialize_model(config: ModelConfig):
     """
@@ -63,7 +61,7 @@ def initialize_model(config: ModelConfig):
     return model
 
 
-def initialize_dataloader(config: DataConfig):
+def initialize_dataloader(config: DataConfig, num_workers=12):
     """
     data_path: str, batch_size: int = 32, augment: bool = True
     """
@@ -76,17 +74,16 @@ def initialize_dataloader(config: DataConfig):
                 transforms.RandomRotation(90),
                 # Noise to avoid overfitting
                 AddGaussianNoise(mean=0.0, std=0.01, clip=True),
-                # Reshape to ImageNet size and expected mean and std
-                # transforms.Resize((224, 224)),
-                # transforms.Normalize() # mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                # Normalize to -1, 1
+                transforms.Normalize(mean=0.5, std=0.5),
             ]
         )
     else:
         transform = transforms.Compose(
             [
                 transforms.ToTensor(),
-                # transforms.Resize((224, 224)),
-                # transforms.Normalize() # mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                # Normalize to -1, 1
+                transforms.Normalize(mean=0.5, std=0.5),
             ]
         )
     dataset = ImageFolder(config.data_location, transform=transform)
@@ -101,7 +98,9 @@ def initialize_dataloader(config: DataConfig):
         sampler = torch.utils.data.WeightedRandomSampler(
             weights=weights, num_samples=len(dataset), replacement=True
         )
-    dataloader = DataLoader(dataset, batch_size=config.batch_size, sampler=sampler)
+    dataloader = DataLoader(
+        dataset, batch_size=config.batch_size, sampler=sampler, num_workers=num_workers
+    )
     return dataloader
 
 
