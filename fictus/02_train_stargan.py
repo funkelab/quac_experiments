@@ -37,7 +37,7 @@ def main(config_file: str = "config.yaml"):
     # Setup classifier and data for validation
     val_dataset = ValidationData(**experiment.validation_data.model_dump())
 
-    # Training the model # TODO debug
+    # Training the model
     solver.train(
         dataset,
         **experiment.run.model_dump(),
@@ -48,13 +48,4 @@ def main(config_file: str = "config.yaml"):
 
 
 if __name__ == "__main__":
-    repo = git.Repo(search_parent_directories=True)
-    # Warn if there are untracked files
-    if repo.untracked_files:
-        warnings.warn(
-            f"There are untracked files in the repository: {repo.untracked_files}"
-        )
-    assert (
-        not repo.is_dirty()
-    ), "Please commit your changes before running the training script"
     typer.run(main)
