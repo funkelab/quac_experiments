@@ -26,6 +26,15 @@ validation_data:
   mean: 0.5  # Default
   std: 0.5  # Default
 
+test_data: 
+  source: "/nrs/funke/adjavond/data/fictus/aggregatum/test_small"
+  reference: "/nrs/funke/adjavond/data/fictus/aggregatum/test_small"
+  img_size: 128
+  batch_size: 16
+  num_workers: 12
+  mean: 0.5  # Default
+  std: 0.5  # Default
+
 model: 
   img_size: 128
   style_dim: 64
