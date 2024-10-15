@@ -35,7 +35,9 @@ We use the diversity loss (`lambda_ds=0.5`), and keep it relatively high through
 The model is trained for 10000 iterations on an NVIDIA A100 GPU. 
 Every 1000 iterations, translation rate and conversion rate are evaluated using the previously trained classifier, the validation dataset, and 10 tries per sample. 
 The model weights are also checkpointed at this time.
-The iteration with the highest average conversion rate is iteration [L] for latent generation, and iteration [R] for reference-based generation. We use these iteration checkpoints to generate counterfactuals. 
+The conversion rate reaches 1 for all conversions, so we use the translation rates to choose the iterations to keep. 
+The iteration with the highest average translation rate is iteration 8000 (latent-based 0.96667, reference-based 0.99792; we averaged over both latent and reference). 
+We use this iteration checkpoints to generate counterfactuals. 
 
 ### Third Stargan - more diversity
 The configuration used for training can be found in `configs/stargan_20241014.yml`.
@@ -44,7 +46,9 @@ We use the diversity loss (`lambda_ds=0.9`), and keep it relatively high through
 The model is trained for 10000 iterations on an NVIDI A100 GPU. 
 Every 1000 iterations, translation rate and conversion rate are evaluated using the previously trained classifier, the validation dataset, and 10 tries per sample. 
 The model weights are also checkpointed at this time.
-The iteration with the highest average conversion rate is iteration [L] for latent generation, and iteration [R] for reference-based generation. We use these iteration checkpoints to generate counterfactuals. 
+The conversion rate reaches 1 for all conversions, so we use the translation rates to choose the iterations to keep. 
+The iteration with the highest average translation rate is iteration 6000 (latent-based 0.9895, reference-based 1.0; we averaged over both latent and reference). 
+We use this iteration checkpoints to generate counterfactuals. 
 
 ## Image Conversion
 Converted images are generated using both latents and references (`03_generate.py`).
