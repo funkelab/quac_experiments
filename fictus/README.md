@@ -47,10 +47,16 @@ The model weights are also checkpointed at this time.
 The iteration with the highest average conversion rate is iteration [L] for latent generation, and iteration [R] for reference-based generation. We use these iteration checkpoints to generate counterfactuals. 
 
 ## Image Conversion
-Converted images are generated twice using latents and twice using references (`03_generate_counterfactuals.py`) -- this leads to four stored conversion options per image.
-The model is give [M] total tries per sample for conversion. 
-The latent counterfactual generation reaches an average conversion rate of [Cl], with a range of [Cl1, Cl2]. 
-The reference coungerfactual generation reaches an average conversion rate of [Cr], with a range of [Cr1, Cr2].
+Converted images are generated using both latents and references (`03_generate.py`).
+Since the translation rate is close to one for this experiment, we generate 2 images per input.
+To avoid issues related to changing data types, and storing to and from image file formats, we store the generated images directly as output by the model, in a Zarr file.
+The generated images are grouped by their source-target pair -- the arrays are named `{source}_{target}`, where `source` and `target` correpond to class indices. 
+These class indices are the same as the class indices in the classifier output. 
+They are stored as `float32`, with dimensions `(index, batch, channel, y, x)` where `index` is the index of the sample within a class, `batch` is the set of generated images per input, `channel, y, x` should match those of the real images.
+We simultaneously classify the generated images.
+The latent-based generation reaches an average conversion rate of [Cl], with a range of [Cl1, Cl2]. 
+The reference-based generation reaches an average conversion rate of [Cr], with a range of [Cr1, Cr2].
+The predictions are stored in the same Zarr file.
 
 ## Ideation
 Experiment/generation-type/run: 
@@ -64,30 +70,28 @@ Experiment/generation-type/run:
     - 2
 - Standard StarGAN encoder - 2024-10-13
     - latent
-        - first generation
-            - Counterfactuals
-                - 0_1
-                - 0_2
-                - ...
-            - Counterfactual predictions
-                - 0_1
-                - 0_2
-                - ...
-            - Attributions
-                - Method 1
-                    - attributions
-                        - 0_1
-                        - 0_2
-                    - threshold, mask-size,  delta-f
-                        - 0_1
-                        - 0_2 
-                    - scores
-                        - 0_1
-                        - 0_1
-                - Method 2
-                - Method 3
-                - Method 4
-        - second generation
+        - Generated
+            - 0_1 (index, batch, channel, y, x)
+            - 0_2
+            - ...
+        - Predictions
+            - 0_1 (index, batch, num_classes)
+            - 0_2
+            - ...
+        - Attributions
+            - Method 1
+                - attributions
+                    - 0_1 (index, batch, channel, y, x)
+                    - 0_2
+                - threshold, mask-size, delta-f (index, batch, evaluation-length, 3)
+                    - 0_1
+                    - 0_2 
+                - scores (index, batch)
+                    - 0_1
+                    - 0_1
+                - optimal_mask (index, batch, channel, y, x) -- unsmoothed mask
+            - Method 2
+            - Method 3
+            - Method 4
     - reference
-        - first generation
-        - second generation
+        - ...
