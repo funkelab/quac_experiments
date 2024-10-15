@@ -72,9 +72,8 @@ def generate(
     inference_model.eval()
 
     # Load the data
-    try:
-        data_config = experiment.test_data
-    except KeyError:
+    data_config = experiment.test_data
+    if data_config is None:
         logging.warning("Test data not found in metadata, using validation data")
         data_config = experiment.validation_data
     # Load the data
@@ -137,7 +136,7 @@ def generate(
                         desc=f"Run {i + 1} / {num_samples}",
                     ):
                         y_target = torch.tensor([target] * x.size(0)).to(device)
-                        xg = inference_model(x, x_ref, y_target)
+                        xg = inference_model(x.to(device), x_ref.to(device), y_target)
                         # Predict the class of the generated images
                         pred = torch.softmax(classifier(xg), dim=-1)
                         # Save generated images
@@ -145,9 +144,9 @@ def generate(
                             batch_idx * batch_size,
                             (batch_idx + 1) * batch_size,
                         )
-                        source_target_images[start:end] = xg.cpu().numpy()
+                        source_target_images[start:end, i] = xg.cpu().numpy()
                         # Save generated predictions
-                        source_target_predictions[start:end] = pred.cpu().numpy()
+                        source_target_predictions[start:end, i] = pred.cpu().numpy()
 
                 else:  # kind == "latent"
                     torch.manual_seed(i)  # Trying to make this somewhat reproducible
