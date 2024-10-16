@@ -58,9 +58,23 @@ The generated images are grouped by their source-target pair -- the arrays are n
 These class indices are the same as the class indices in the classifier output. 
 They are stored as `float32`, with dimensions `(index, batch, channel, y, x)` where `index` is the index of the sample within a class, `batch` is the set of generated images per input, `channel, y, x` should match those of the real images.
 We simultaneously classify the generated images.
-The latent-based generation reaches an average conversion rate of [Cl], with a range of [Cl1, Cl2]. 
-The reference-based generation reaches an average conversion rate of [Cr], with a range of [Cr1, Cr2].
 The predictions are stored in the same Zarr file.
+
+We get the accuracies of these conversions (`analysis.py`)
+
+### First StarGAN
+The latent-based generation reaches an average conversion rate of 0.9904, with a range of [0.9893, 0.9915]. 
+The reference-based generation reaches an average conversion rate of 0.997, with a range of [0.9966, 0.9973].
+
+### Second StarGAN
+The latent-based generation reaches an average conversion rate of 0.96725, with a range of [0.9668, 0.9676]. 
+The reference-based generation reaches an average conversion rate of 0.9921, with a range of [0.992, 0.9923].
+
+### Third StarGAN
+The latent-based generation reaches an average conversion rate of 0.9915, with a range of [0.9903, 0.9926]. 
+The reference-based generation reaches an average conversion rate of 0.999, with a range of [0.9986, 0.9993].
+
+## Attribution
 
 ## Ideation
 Experiment/generation-type/run: 
