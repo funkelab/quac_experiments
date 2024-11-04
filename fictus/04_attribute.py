@@ -18,20 +18,20 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class ConcatDataset(torch.utils.data.Dataset):
     """
-    Combines the images and the counterfactuals.
+    Combines the images and the generated_images.
     """
 
-    def __init__(self, source_dataset, counterfactual_array):
+    def __init__(self, source_dataset, generated_image_array):
         self.source_dataset = source_dataset
-        self.counterfactual_array = counterfactual_array
-        assert len(source_dataset) == counterfactual_array.shape[0]
+        self.generated_image_array = generated_image_array
+        assert len(source_dataset) == generated_image_array.shape[0]
 
     def __len__(self):
         return len(self.source_dataset)
 
     def __getitem__(self, idx):
         x, _ = self.source_dataset[idx]
-        cf = self.counterfactual_array[idx].compute()
+        cf = self.generated_image_array[idx].compute()
         return x, cf
 
 
@@ -109,27 +109,27 @@ def attribute(
             if source == target:
                 continue
             logging.info(f"Running for source {source_name}  target {target_name}")
-            counterfactual_array = da.from_zarr(
+            generated_image_array = da.from_zarr(
                 generated_images[f"{source}_{target}"]
             )  # N, B, C, H, W
             # Create a place to store the attribution results
             attributions_array = attribution_group.require_dataset(
                 f"{source}_{target}",
-                shape=counterfactual_array.shape,
+                shape=generated_image_array.shape,
                 dtype=np.float32,
             )
             # Swap the batch and the number of images
-            counterfactual_array = counterfactual_array.transpose(1, 0, 2, 3, 4)
+            generated_image_array = generated_image_array.transpose(1, 0, 2, 3, 4)
 
             for i in range(num_samples):
                 dataloader = torch.utils.data.DataLoader(
-                    ConcatDataset(source_dataset, counterfactual_array[i]),
+                    ConcatDataset(source_dataset, generated_image_array[i]),
                     batch_size=batch_size,
                     shuffle=False,
                     num_workers=4,
                     drop_last=False,
                 )
-                for batch_idx, (image, counterfactual) in tqdm(
+                for batch_idx, (image, generated_image) in tqdm(
                     enumerate(dataloader),
                     total=len(dataloader),
                     desc=f"Run {i + 1} / {num_samples}",
@@ -138,7 +138,7 @@ def attribute(
                     end = min(start + batch_size, len(source_dataset))
                     attributions_array[start:end, i] = attribution.attribute(
                         image.float(),
-                        counterfactual.float(),
+                        generated_image.float(),
                         source,
                         target,
                         device=device,
@@ -147,7 +147,7 @@ def attribute(
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Run attribution using counterfactuals"
+        description="Run attribution using generated images"
     )
     parser.add_argument(
         "-c",
