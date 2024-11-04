@@ -11,6 +11,7 @@ results = zarr.open(
 
 evaluation = results["evaluations"]
 
+
 # %% QuAC scores
 for attribution_method in evaluation.keys():
     pop_curve = evaluation[f"{attribution_method}/population_curve"][:]
@@ -25,6 +26,15 @@ plt.show()
 
 attribution_method = "DIntegratedGradients"
 pop_curve = evaluation[f"{attribution_method}/population_curve"][:]
+
+# %% QuAC scores, method-agnostic
+quac_scores = pd.DataFrame(
+    {method: evaluation[f"{method}/quac_scores"][:] for method in evaluation.keys()}
+)
+
+best_method = quac_scores.idxmax(axis=1)
+best_quac = quac_scores.max(axis=1)
+
 
 # %%
 # The indices that are "valid" (i.e., where the source and target are not the same) have been annotated using a boolean array.
@@ -55,9 +65,13 @@ mapping = pd.DataFrame(
     mapping,
     columns=["source", "target", "source_index", "eval_index", "well_predicted"],
 )
-mapping["quac_scores"] = evaluation[f"{attribution_method}/quac_scores"][:]
+# mapping["quac_scores"] = evaluation[f"{attribution_method}/quac_scores"][:]
+# Stack the best method and the best quac score
+mapping["method"] = best_method
+mapping["quac_scores"] = best_quac
 # Drop everything that is not well predicted
 mapping = mapping[mapping["well_predicted"]]
+
 # %%
 import matplotlib as mpl
 
@@ -90,6 +104,8 @@ for (src, target), group in mapping.groupby(["source", "target"]):
     image = results["images"][source_index]
     # Get the corresponding counterfactual image
     cf = counterfactuals[source_index]
+    # Get the attribution method to use
+    attribution_method = group.loc[idx, "method"]
     # Get the corresponding hybrid image
     hybrid_index = group.loc[idx, "eval_index"]
     hybrid = evaluation[f"{attribution_method}/hybrids"][hybrid_index]
@@ -162,6 +178,8 @@ for (src, target), group in mapping.groupby(["source", "target"]):
     # Get the corresponding source image
     source_index = group.loc[idx, "source_index"]
     image = results["images"][source_index]
+    # Get the attribution method to use
+    attribution_method = group.loc[idx, "method"]
     # Get the corresponding hybrid image
     hybrid_index = group.loc[idx, "eval_index"]
     hybrid = evaluation[f"{attribution_method}/hybrids"][hybrid_index]
@@ -182,17 +200,23 @@ for (src, target), group in mapping.groupby(["source", "target"]):
     plt.close()
     # Counterfactual (formerly hybrid)
     plt.imshow(hybrid.squeeze(), cmap="gray", vmin=-1, vmax=1)
-    # Draw a contour plot of the mask
-    threshold = 0.1
-    plt.contour(mask.squeeze(), levels=[threshold], colors="magenta", linewidths=3)
-    # Slightly darken the areas outside of the mask
-    plot_mask = mask.squeeze().copy()
-    plot_mask = np.ma.masked_where(mask.squeeze() > threshold, np.ones_like(plot_mask))
-    plt.imshow(plot_mask, alpha=0.4, cmap="gray_r", vmin=0, vmax=1)
-    #
     plt.axis("off")
     # Save and close figure
     plt.savefig(this_path / "hybrid.png", bbox_inches="tight", pad_inches=0)
+    plt.close()
+    # Draw a contour plot of the mask
+    threshold = 0.5
+    # Plot a black image
+    plt.imshow(np.zeros_like(mask).squeeze(), cmap="gray", vmin=0, vmax=1)
+    plt.contour(mask.squeeze(), levels=[threshold], colors="white", linewidths=3)
+    # Slightly darken the areas outside of the mask
+    # plot_mask = mask.squeeze().copy()
+    # plot_mask = np.ma.masked_where(mask.squeeze() > threshold, np.ones_like(plot_mask))
+    # plt.imshow(plot_mask, alpha=0.4, cmap="gray_r", vmin=0, vmax=1)
+    #
+    plt.axis("off")
+    # Save and close figure
+    plt.savefig(this_path / "contour.png", bbox_inches="tight", pad_inches=0)
     plt.close()
     pred_file = pd.DataFrame(
         {
