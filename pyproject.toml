@@ -19,7 +19,9 @@ dynamic = ["version"]
 dependencies = [
   "matplotlib",
   "GitPython",
-  "pydantic"
+  "pydantic",
+  "kornia",
+  "scikit-image"
 ]
 
 [project.optional-dependencies]

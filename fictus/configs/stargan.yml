@@ -1,11 +1,12 @@
-project: "fictus-stargan"
-name: "stargan_v0"
-notes: "Stargan training on fictus dataset"
-tags: 
-  - fictus
-  - stargan
-  - training
-  - quac
+log:
+  project: "fictus-stargan"
+  name: "stargan_v0"
+  notes: "Stargan training on fictus dataset"
+  tags: 
+    - fictus
+    - stargan
+    - training
+    - quac
 
 data: 
   source: "/nrs/funke/adjavond/data/fictus/aggregatum/train"
