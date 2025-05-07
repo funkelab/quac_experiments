@@ -5,8 +5,8 @@ from torch.utils.data import DataLoader
 from quac.training.data_loader import LabelledDataset
 from quac.data import create_transform
 from torch.optim.lr_scheduler import CosineAnnealingLR
+from torchvision import transforms
 from torch.optim import RAdam
-from tqdm import tqdm
 import torch
 import timm
 import accelerate
@@ -17,6 +17,45 @@ import seaborn as sns
 import wandb
 from pathlib import Path
 from accelerate.logging import get_logger
+from accelerate.utils import set_seed, tqdm
+
+
+class GaussianNoise:
+    """
+    Add Gaussian noise to the input image.
+    """
+
+    def __init__(self, mean=0.0, std=0.1):
+        self.mean = mean
+        self.std = std
+
+    def __call__(self, img):
+        return img + torch.randn_like(img) * self.std + self.mean
+
+
+def create_augmentation(transform):
+    """
+    Create the augmentation pipeline for the training dataset.
+    The augmentation includes random horizontal and vertical flips,
+    Gaussian blur, random rotation, and Gaussian noise.
+
+    Parameters
+    ----------
+    transform : Callable
+        The base transform to apply to the images.
+    """
+    # Augmentation for the training dataset
+    augmentation = transforms.Compose(
+        [
+            transform,  # Apply the base transform first
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomVerticalFlip(),
+            transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 2.0)),
+            transforms.RandomRotation(30),
+            GaussianNoise(mean=0.0, std=0.1),  # Add Gaussian noise
+        ]
+    )
+    return augmentation
 
 
 def plot_confusion_matrix(cm, classes):
@@ -100,7 +139,9 @@ def main(
     eta_min: float = 1e-6,
     total_epochs: int = 10,
 ):
-    accelerator = accelerate.Accelerator(log_with="wandb")
+    accelerator = accelerate.Accelerator(
+        log_with="wandb", step_scheduler_with_optimizer=False
+    )
     # Setup the logger for distributed setup
     logger = get_logger(__name__, log_level="INFO")
     logger.info("Using accelerate to train the model, logger to wandb")
@@ -108,8 +149,10 @@ def main(
     transform = create_transform(
         img_size=img_size, grayscale=grayscale, rgb=rgb, scale=scale, shift=shift
     )
+    augmentation = create_augmentation(transform)
+
     logger.info(f"Loading dataset from {data_dir}")
-    dataset = LabelledDataset(data_dir, transform=transform)
+    dataset = LabelledDataset(data_dir, transform=augmentation)
     logger.info(f"Loading validation dataset from {val_data_dir}")
     val_dataset = LabelledDataset(val_data_dir, transform=transform)
 
@@ -230,7 +273,7 @@ def main(
             accelerator.log(
                 {
                     "loss": running_loss,
-                    "learning_rate": optimizer.param_groups[0]["lr"],
+                    "learning_rate": scheduler.get_last_lr()[0],
                     **metrics,
                     # Confusion matrix
                     "confusion_matrix": wandb.Image(cm_plot),
@@ -249,6 +292,8 @@ def main(
 
 
 if __name__ == "__main__":
+    # Reproducibility
+    set_seed(42)
     # configuration information
     data_dir = "/nrs/funke/adjavond/data/bbbc021_processed/train"
     val_data_dir = "/nrs/funke/adjavond/data/bbbc021_processed/val"
@@ -257,7 +302,7 @@ if __name__ == "__main__":
     config = {
         "model": "resnet34",
         "batch_size": 48,
-        "total_epochs": 10,
+        "total_epochs": 50,
         "img_size": 80,
         "grayscale": False,
         "rgb": True,
