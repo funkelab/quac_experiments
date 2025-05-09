@@ -1,10 +1,3 @@
-"""
-FIXME: The data loading code loads the data as grayscale by default.
-I want RGB by default.
-
-FIXME: This script currently has problems. I am using "notebooks/post_hoc_validation.py" instead.
-"""
-
 from pathlib import Path
 from quac.generate import load_data, load_stargan, get_counterfactual
 import torch
@@ -66,10 +59,10 @@ def main(
 
             output_directory = (
                 Path(metadata["solver"]["root_dir"])
-                / f"counterfactuals/{kind}/{source_name}/{target_name}/{subdir}"
+                / f"generated_images/{kind}/{source_name}/{target_name}/{subdir}"
             )
             output_directory.mkdir(parents=True, exist_ok=True)
-            print("Counterfactuals will be saved in:", str(output_directory))
+            print("Generated images will be saved in:", str(output_directory))
 
             for x, name in tqdm(dataset):
                 # Repeat the image 3 times to get the 3 channels
@@ -87,7 +80,7 @@ def main(
                 xcf = xcf * 0.5 + 0.5
                 assert (
                     xcf.min() >= 0 and xcf.max() <= 1
-                ), f"Counterfactuals are not in [0, 1]: {xcf.min()}, {xcf.max()}"
+                ), f"Generated images are not in [0, 1]: {xcf.min()}, {xcf.max()}"
                 # For example, you can save the images here
                 save_image(xcf, output_directory / name)
 

@@ -29,14 +29,24 @@ def run_worker(
     classifier.eval()
 
     source_dir = metadata["test_data"]["source"]
-    counterfactual_dir = (
-        Path(metadata["solver"]["root_dir"]) / f"counterfactuals/{kind}/{subdir}"
+    generated_dir = (
+        Path(metadata["solver"]["root_dir"]) / f"generated_images/{kind}/{subdir}"
     )
-    print(f"Counterfactuals: {counterfactual_dir}")
+    print(f"Generated images: {generated_dir}")
     attribution_dir = (
         Path(metadata["solver"]["root_dir"]) / f"attributions/{kind}/{subdir}/{method}"
     )
     print(f"Attributions: {attribution_dir}")
+    mask_output_dir = (
+        Path(metadata["solver"]["root_dir"]) / f"masks/{kind}/{subdir}/{method}"
+    )
+    print(f"Masks: {mask_output_dir}")
+    counterfactual_output_dir = (
+        Path(metadata["solver"]["root_dir"])
+        / f"counterfactuals/{kind}/{subdir}/{method}"
+    )
+    print(f"Counterfactuals: {counterfactual_output_dir}")
+
     # This transform will be applied to all images before running attributions
     transform = transforms.Compose(
         [transforms.Resize(224), transforms.ToTensor(), transforms.Normalize(mean, std)]
@@ -46,9 +56,11 @@ def run_worker(
     evaluator = Evaluator(
         classifier,
         source_directory=source_dir,
-        counterfactual_directory=counterfactual_dir,
+        generated_directory=generated_dir,
         attribution_directory=attribution_dir,
         transform=transform,
+        mask_output_dir=mask_output_dir,
+        counterfactual_output_dir=counterfactual_output_dir,
     )
     print("Quantifying attributions")
     report = evaluator.quantify(processor=Processor())
