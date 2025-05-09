@@ -13,11 +13,12 @@ import accelerate
 import evaluate
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
 import wandb
 from pathlib import Path
 from accelerate.logging import get_logger
 from accelerate.utils import set_seed, tqdm
+
+from classification_utils import ConfusionMatrix, plot_confusion_matrix
 
 
 class GaussianNoise:
@@ -52,73 +53,10 @@ def create_augmentation(transform):
             transforms.RandomVerticalFlip(),
             transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 2.0)),
             transforms.RandomRotation(30),
-            GaussianNoise(mean=0.0, std=0.1),  # Add Gaussian noise
+            GaussianNoise(mean=0.0, std=0.01),  # Add Gaussian noise
         ]
     )
     return augmentation
-
-
-def plot_confusion_matrix(cm, classes):
-    """
-    Plot the confusion matrix with annotations as fractions (e.g., 20 / 45),
-    and color intensity representing the fraction. Handles division by zero.
-    """
-    row_sums = cm.sum(axis=1, keepdims=True)  # Row-wise totals
-    # Avoid division by zero by replacing zeros with ones temporarily
-    row_sums_safe = np.where(row_sums == 0, 1, row_sums)
-    cm_normalized = cm / row_sums_safe  # Normalize by row for color intensity
-
-    fig, ax = plt.subplots(figsize=(15, 15))
-    sns.heatmap(
-        cm_normalized,
-        annot=False,
-        cmap="Blues",
-        xticklabels=classes,
-        yticklabels=classes,
-        ax=ax,
-        cbar=False,
-    )
-
-    # Add annotations as fractions
-    for i in range(cm.shape[0]):
-        for j in range(cm.shape[1]):
-            count = int(cm[i, j])
-            total = int(row_sums[i][0])
-            if total == 0:
-                annotation = f"{count} / 0"
-            else:
-                annotation = f"$\\frac{{{count}}}{{{total}}}$"  # LaTeX fraction
-            ax.text(
-                j + 0.5,
-                i + 0.5,
-                annotation,
-                ha="center",
-                va="center",
-                fontsize=8,
-                color="black",
-            )
-
-    ax.set_xlabel("Predicted label")
-    ax.set_ylabel("True label")
-    fig.suptitle("Confusion Matrix", fontsize=16)
-    fig.tight_layout()
-    return fig
-
-
-class ConfusionMatrix:
-    def __init__(self, num_classes):
-        self.num_classes = num_classes
-        self.confusion_matrix = np.zeros((num_classes, num_classes))
-
-    def update(self, preds, labels):
-        for p, t in zip(preds, labels):
-            self.confusion_matrix[t, p] += 1
-
-    def compute(self):
-        return self.confusion_matrix
-
-    def reset(self):
-        self.confusion_matrix = np.zeros((self.num_classes, self.num_classes))
 
 
 def main(
@@ -142,9 +80,19 @@ def main(
     accelerator = accelerate.Accelerator(
         log_with="wandb", step_scheduler_with_optimizer=False
     )
+
     # Setup the logger for distributed setup
     logger = get_logger(__name__, log_level="INFO")
     logger.info("Using accelerate to train the model, logger to wandb")
+
+    logger.info(f"Using {accelerator.num_processes} GPUs, updating learning rate.")
+    # Update the learning rates based on number of GPUs
+    lr *= accelerator.num_processes
+    eta_min *= accelerator.num_processes
+
+    logger.info(f"Effective batch size: {batch_size * accelerator.num_processes}")
+    logger.info(f"Effective learning rate: {lr}")
+    logger.info(f"Effective eta_min: {eta_min}")
 
     transform = create_transform(
         img_size=img_size, grayscale=grayscale, rgb=rgb, scale=scale, shift=shift
@@ -281,8 +229,8 @@ def main(
                 step=epoch,
             )
             # Save the model
-            model_path = run_dir / f"model_epoch_{epoch + 1}.pth"
-            torch.save(model.state_dict(), model_path)
+            model_path = run_dir / f"model_epoch_{epoch}.pth"
+            torch.save(accelerator.unwrap_model(model).state_dict(), model_path)
             logger.info(f"Model saved to {model_path}")
             # Close the figure
             plt.close(cm_plot)
