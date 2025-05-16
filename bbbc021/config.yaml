@@ -1,0 +1,53 @@
+data:
+    source: "/nrs/funke/adjavond/data/bbbc021_subset/train"
+    img_size: 80
+    batch_size: 16
+    num_workers: 12
+    grayscale: false
+    rgb: true
+
+validation_data:
+    source: "/nrs/funke/adjavond/data/bbbc021_subset/val"
+    img_size: 80
+    batch_size: 16
+    num_workers: 12
+    grayscale: false
+    rgb: true
+
+test_data:
+    source: "/nrs/funke/adjavond/data/bbbc021_subset/test"
+    img_size: 80 
+    batch_size: 16
+    num_workers: 12
+    grayscale: false
+    rgb: true
+    
+model:
+    img_size: 80
+    style_dim: 64
+    latent_dim: 16
+    num_domains: 6
+    input_dim: 3
+    final_activation: "tanh"
+
+solver:
+    root_dir: "/nrs/funke/adjavond/projects/quac/bbbc021"
+
+validation_config:
+    classifier_checkpoint: "/nrs/funke/adjavond/projects/quac/bbbc021/classifier/selected_classes.pt"
+    val_batch_size: 16
+  
+log:
+    project: "bbbc021"
+    name: "stargan_v0"
+    notes: "Stargan training on BBBC021 with subset of 6 classes"
+    tags:
+        - stargan
+        - training
+        - bbbc021
+
+run:
+    log_every: 100
+    total_iters: 100000
+    save_every: 1000
+    eval_every: 1000
