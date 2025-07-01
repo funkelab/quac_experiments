@@ -1,0 +1,26 @@
+project: "fictus-classification"
+notes: "Training a Resnet18 classifier on fictus aggregatum dataset using pre-trained weights"
+tags: ["fictus", "quac", "resnet18", "classification", "pretrained"]
+data:
+  data_location: "/nrs/funke/adjavond/data/fictus/aggregatum/train"
+  batch_size: 32
+val_data:
+  data_location: "/nrs/funke/adjavond/data/fictus/aggregatum/val"
+  batch_size: 32
+  augment: False
+  balance: False
+model:
+  type: "resnet18_pretrained"
+  num_classes: 4
+  image_size: 128
+  input_fmaps: 3
+  fmaps: 32
+training:
+  epochs: 10
+  learning_rate: 0.001
+  checkpoint_dir: "/nrs/funke/adjavond/projects/quac/fictus/classification/"
+  device: "cuda"
+  ema:
+    decay: 0.999
+    ema_start: 100 # No EMA in this run, just copies
+  

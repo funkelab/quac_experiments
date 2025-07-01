@@ -1,0 +1,54 @@
+log:
+  project: "flyid-stargan"
+  name: "stargan_selected_classes"
+  notes: "Stargan training on flyid dataset - limited to 3 classes with good classification"
+  tags: 
+    - flyid
+    - stargan
+    - training
+    - quac
+
+data: 
+  source: "/nrs/funke/adjavond/data/flyid/week1_limited/Day1/train"
+  reference: "/nrs/funke/adjavond/data/flyid/week1_limited/Day1/train"
+  img_size: 224
+  batch_size: 16
+  num_workers: 12
+
+validation_data: 
+  source: "/nrs/funke/adjavond/data/flyid/week1_limited/Day1/val"
+  reference: "/nrs/funke/adjavond/data/flyid/week1_limited/Day1/val"
+  img_size: 224
+  batch_size: 16
+  num_workers: 12
+
+test_data: 
+  source: "/nrs/funke/adjavond/data/flyid/week1_limited/Day2/val"
+  reference: "/nrs/funke/adjavond/data/flyid/week1_limited/Day2/val"
+  img_size: 224
+  batch_size: 16
+  num_workers: 12
+
+model: 
+  img_size: 224
+  style_dim: 64
+  latent_dim: 10
+  num_domains: 3
+  input_dim: 3
+
+solver:
+  root_dir: "/nrs/funke/adjavond/projects/quac/flyid/stargan_selected_classes"
+
+loss:
+  lambda_ds: 0.0
+
+validation_config: 
+  classifier_checkpoint: "/nrs/funke/adjavond/projects/quac/flyid/final_classifier_jit_selected_classes.pth"
+  do_nothing: true
+
+run: 
+  log_every: 100
+  resume_iter: 0
+  total_iters: 100000
+  save_every: 5000
+  eval_every: 1000

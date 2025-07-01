@@ -1,0 +1,13 @@
+
+# pixi environments
+.pixi
+*.egg-info
+
+# runs
+wandb
+
+# annotations
+annotations
+
+# Figure files
+figures

@@ -16,7 +16,11 @@ authors = [
     { email = "adjavond@hhmi.org", name = "Diane Adjavon" },
 ]
 dynamic = ["version"]
-dependencies = []
+dependencies = [
+  "matplotlib",
+  "GitPython",
+  "pydantic"
+]
 
 [project.optional-dependencies]
 dev = [

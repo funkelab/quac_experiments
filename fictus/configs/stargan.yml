@@ -1,0 +1,50 @@
+project: "fictus-stargan"
+name: "stargan_v0"
+notes: "Stargan training on fictus dataset"
+tags: 
+  - fictus
+  - stargan
+  - training
+  - quac
+
+data: 
+  source: "/nrs/funke/adjavond/data/fictus/aggregatum/train"
+  reference: "/nrs/funke/adjavond/data/fictus/aggregatum/train"
+  img_size: 128
+  batch_size: 16
+  num_workers: 12
+  mean: null
+  std: null
+
+validation_data: 
+  source: "/nrs/funke/adjavond/data/fictus/aggregatum/val"
+  reference: "/nrs/funke/adjavond/data/fictus/aggregatum/val"
+  img_size: 128
+  batch_size: 16
+  num_workers: 12
+  mean: null
+  std: null
+
+model: 
+  img_size: 128
+  style_dim: 64
+  latent_dim: 10
+  num_domains: 5 
+  input_dim: 3
+  final_activation: "sigmoid"
+
+solver:
+  root_dir: "/nrs/funke/adjavond/projects/quac/fictus/stargan"
+
+validation_config: 
+  classifier_checkpoint: "/nrs/funke/adjavond/projects/quac/fictus/classification/best_model.pt"
+  mean: null
+  std: null
+  assume_normalized: true
+
+run: 
+  log_every: 100
+  resume_iter: 0
+  total_iters: 100000
+  save_every: 1000
+  eval_every: 1000

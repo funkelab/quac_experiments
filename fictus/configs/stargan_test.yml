@@ -1,0 +1,53 @@
+log_type: "wandb"
+
+log: 
+  project: "stargan-test"
+  name: "stargan_test"
+  notes: "Stargan dev testing" 
+  tags: 
+    - fictus
+    - stargan
+    - ignore
+    - quac
+
+data: 
+  source: "/nrs/funke/adjavond/data/fictus/aggregatum/train"
+  reference: "/nrs/funke/adjavond/data/fictus/aggregatum/train"
+  img_size: 128
+  batch_size: 16
+  num_workers: 12
+  mean: null
+  std: null
+
+validation_data: 
+  source: "/nrs/funke/adjavond/data/fictus/aggregatum/val"
+  reference: "/nrs/funke/adjavond/data/fictus/aggregatum/val"
+  img_size: 128
+  batch_size: 16
+  num_workers: 12
+  mean: null
+  std: null
+
+model: 
+  img_size: 128
+  style_dim: 64
+  latent_dim: 10
+  num_domains: 5 
+  input_dim: 3
+  final_activation: "sigmoid"
+
+solver:
+  root_dir: "/nrs/funke/adjavond/projects/quac/fictus/stargan_test"
+
+validation_config: 
+  classifier_checkpoint: "/nrs/funke/adjavond/projects/quac/fictus/classification/best_model.pt"
+  mean: null
+  std: null
+  assume_normalized: true
+
+run: 
+  log_every: 1
+  resume_iter: 0
+  total_iters: 10
+  save_every: 1
+  eval_every: 5

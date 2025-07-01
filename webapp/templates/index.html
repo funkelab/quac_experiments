@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <title>Annotation</title>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 style="text-align: center;">Annotation</h1>
+            <button type="submit" form="annotationForm" class="save-button">Save</button>
+        </div>
+        <form method="POST" id="annotationForm">
+            <table id="annotationTable">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        {% for column, description in columns|zip(descriptions) %}
+                        <th title="{{ description }}">{{ column }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    {% for item, states in items.items() %}
+                    <tr>
+                        <td>
+                            <img src="{{ url_for('serve_image', filename=item) }}" alt="{{ item }}">
+                        </td>
+                        {% for state in states %}
+                        <td>
+                            <input type="checkbox" name="state_{{ item }}_{{ loop.index0 }}" {% if state %}checked{%
+                                endif %}>
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <input type="hidden" name="pageStates" id="pageStatesInput">
+        </form>
+    </div>
+</body>
+
+</html>
