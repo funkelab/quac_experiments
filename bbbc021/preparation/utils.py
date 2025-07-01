@@ -14,6 +14,24 @@ def get_base_name(row):
     return f"{plate}_{well}_{table}_{image}"
 
 
+def get_meta_from_name(name: str):
+    """
+    Get metadata from the image name.
+    The name is expected to be in the format: plate_well_table_image.
+    Note that the plate name has underscores, so we cannot directly split by underscores.
+    """
+    name = Path(name).stem  # Get the stem of the path to avoid issues with extensions
+    well, table, image, cell = name.split("_")[-4:]
+    plate = name.replace(f"_{well}_{table}_{image}_{cell}", "")
+    return {
+        "plate": plate,
+        "well": well,
+        "table": int(table),
+        "image": int(image),
+        "cell": cell,
+    }
+
+
 def get_moa(row):
     """
     Get the moa from the row.
