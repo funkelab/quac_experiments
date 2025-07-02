@@ -16,6 +16,7 @@ from tqdm import tqdm
 import typer
 import wandb
 import yaml
+
 # TODO Make a Training Class
 
 
@@ -46,15 +47,11 @@ def initialize_model(config: ModelConfig):
         )
     elif config.type == "resnet18_pretrained":
         model = timm.create_model(
-            "resnet18.a1_in1k", 
-            pretrained=True, 
-            num_classes=config.num_classes
+            "resnet18.a1_in1k", pretrained=True, num_classes=config.num_classes
         )
     elif config.type == "resnet18_pretrained_frozen":
         model = timm.create_model(
-            "resnet18.a1_in1k", 
-            pretrained=True, 
-            num_classes=config.num_classes
+            "resnet18.a1_in1k", pretrained=True, num_classes=config.num_classes
         )
         for param in model.parameters():
             param.requires_grad = False
@@ -84,7 +81,9 @@ def initialize_dataloader(config: DataConfig):
                 # transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.1),
                 # Reshape to ImageNet size and expected mean and std
                 transforms.Resize((224, 224)),
-                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                transforms.Normalize(
+                    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+                ),
             ]
         )
     else:
@@ -92,7 +91,9 @@ def initialize_dataloader(config: DataConfig):
             [
                 transforms.ToTensor(),
                 transforms.Resize((224, 224)),
-                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                transforms.Normalize(
+                    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+                ),
             ]
         )
     dataset = RetinaDataset(config.csv_path, config.data_location, transform=transform)
@@ -109,7 +110,9 @@ def initialize_dataloader(config: DataConfig):
     return dataloader
 
 
-def save_checkpoint(checkpoint_dir, i, model, model_ema,optimizer, avg_loss, acc, val_acc=None):
+def save_checkpoint(
+    checkpoint_dir, i, model, model_ema, optimizer, avg_loss, acc, val_acc=None
+):
     checkpoint_dir = Path(checkpoint_dir)
     checkpoint_dir.mkdir(exist_ok=True, parents=True)
 
@@ -202,11 +205,14 @@ def train_classifier(
             # Updating EMA model
             if i >= config.training.ema.ema_start:
                 model_ema.update(model)
-            else: 
+            else:
                 # Just set the EMA model weights to the current model weights
                 model_ema.set(model)
             # Unfreeze the model weights after a certain epoch
-            if i == config.training.scheduler.epoch and config.training.scheduler.unfreeze:
+            if (
+                i == config.training.scheduler.epoch
+                and config.training.scheduler.unfreeze
+            ):
                 for param in model.parameters():
                     param.requires_grad = True
 
@@ -219,7 +225,9 @@ def train_classifier(
 
         # Check number of channels
         sample = inputs[: config.log_images].cpu()
-        nrow = config.log_images // int(np.floor(np.sqrt(config.log_images)))  # So if 8 we get 4x2?
+        nrow = config.log_images // int(
+            np.floor(np.sqrt(config.log_images))
+        )  # So if 8 we get 4x2?
         sample = make_grid(sample, nrow=nrow)
 
         # Log to wandb
@@ -266,7 +274,9 @@ def train_classifier(
         else:
             val_acc = None
         # Save checkpoint
-        save_checkpoint(checkpoint_dir, i, model, model_ema, optimizer, avg_loss, acc, val_acc)
+        save_checkpoint(
+            checkpoint_dir, i, model, model_ema, optimizer, avg_loss, acc, val_acc
+        )
 
         # Log to wandb
         run.log(metrics)
@@ -282,4 +292,4 @@ def main(config: str = "vgg.yml"):
 
 
 if __name__ == "__main__":
-        typer.run(main)
+    typer.run(main)

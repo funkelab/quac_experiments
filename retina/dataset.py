@@ -12,7 +12,7 @@ class RetinaDataset:
 
     def __len__(self):
         return len(self.metadata)
-    
+
     def __getitem__(self, idx):
         filename, label = self.metadata.iloc[idx]
         image = Image.open(self.data_location / filename)

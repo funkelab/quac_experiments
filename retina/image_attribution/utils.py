@@ -45,10 +45,7 @@ def mask_label_overlay(
     false_negatives = np.logical_and(average_mask < thresh, label_image > 0)
 
     rgb = np.stack(
-        [   # color_one
-            (c * average_mask).astype(np.uint8) 
-            for c in color_one
-        ],
+        [(c * average_mask).astype(np.uint8) for c in color_one],  # color_one
         axis=-1,
     )
     rgb[true_positives] = color_both

@@ -14,7 +14,7 @@ class PretrainedVGG16(nn.Module):
         self.classifier[6] = nn.Linear(4096, num_classes)
         # Initialize the weights of the last layer with normal distribution
         # nn.init.normal_(self.classifier[6].weight, 0, 0.01)
-    
+
     def forward(self, x):
         x = self.features(x)
         x = self.avgpool(x)

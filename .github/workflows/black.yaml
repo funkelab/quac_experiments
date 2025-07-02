@@ -14,4 +14,4 @@ jobs:
       - name: Lint with Black
         run: |
           pip install black
-          black --diff --check src/quac.experiments tests
+          black --diff --check fictus bbbc021 flyid synapses kenyon_cells webapp

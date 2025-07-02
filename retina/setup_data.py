@@ -7,8 +7,12 @@ from tqdm import tqdm
 import os
 
 # %%
-source_directory = Path("/nrs/funke/adjavond/data/retina/ddrdataset/DR_grading/DR_grading")
-output_directory = Path("/nrs/funke/adjavond/data/retina/ddrdataset/DR_grading/DR_grading_processed")
+source_directory = Path(
+    "/nrs/funke/adjavond/data/retina/ddrdataset/DR_grading/DR_grading"
+)
+output_directory = Path(
+    "/nrs/funke/adjavond/data/retina/ddrdataset/DR_grading/DR_grading_processed"
+)
 
 # %%
 split = "train"
@@ -31,7 +35,6 @@ for split in ["train", "test", "val"]:
     for _, row in tqdm(metadata.iterrows(), total=len(metadata), desc=f"{split} split"):
         filename = row["id_code"]
         target = row["diagnosis"]
-        assert (source_directory/ filename).exists()
+        assert (source_directory / filename).exists()
         assert target in target_directories
         os.symlink(source_directory / filename, target_directories[target] / filename)
-

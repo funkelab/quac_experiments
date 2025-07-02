@@ -1,5 +1,5 @@
 # %% [markdown]
-# # Evaluate the attributions 
+# # Evaluate the attributions
 # In this notebook we will evaluate the attributions that we got in [[attribute_lesion_segmentation.py]]
 # %% [markdown]
 # ## Getting the metadata
@@ -18,22 +18,26 @@ metadata = safe_load(open("lesion_segmentation.yaml"))
 attribution_method = "discriminative_ig"
 # attribution_method = "vanilla_ig"
 
-metadata["attribution_directory"] = metadata["attribution_directory"] + "/" + attribution_method
+metadata["attribution_directory"] = (
+    metadata["attribution_directory"] + "/" + attribution_method
+)
 metadata["report_directory"] = metadata["report_directory"] + "/" + attribution_method
 
 # %% [markdown]
 # ## Loading the classifier
-# We will need the same classifier as we were using to run attributions. 
+# We will need the same classifier as we were using to run attributions.
 # As a reminder: the classifier is a ResNet50 that has been trained on the retina DDR dataset.
 # It was pre-trained with ImageNet weights, so it expects images to be normalized with mean (0.485, 0.456, 0.406) and standard deviation (0.229, 0.224, 0.225).
 from quac.generate import load_classifier
 
 classifier = load_classifier(
-    metadata["classifier_checkpoint"], mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)
+    metadata["classifier_checkpoint"],
+    mean=(0.485, 0.456, 0.406),
+    std=(0.229, 0.224, 0.225),
 )
 # %% [markdown]
 # Once again, we will need to define the transform that we will use to process the images.
-# This transform will be used on the counterfactuals and the source images. 
+# This transform will be used on the counterfactuals and the source images.
 # Make sure that there is no randomness in the transform, or the counterfactuals will not match the source images.
 # %%
 # Define the transform
@@ -54,42 +58,43 @@ transform = transforms.Compose(
 
 # %% Define the evaluator
 from quac.evaluation import Evaluator
+
 evaluator = Evaluator(
     classifier,
     source_directory=metadata["source_directory"],
     counterfactual_directory=metadata["counterfactual_directory"],
     attribution_directory=metadata["attribution_directory"],
-    transform=transform
+    transform=transform,
 )
 
 # %% [markdown]
 # ## Running classification of the counterfactuals
 # One useful function of the evaluator is that it lets us check how good the counterfactuals are.
-# 
-# Note: If you a re-running this notebook on a new attribution method, comment the following cell out to save time! 
+#
+# Note: If you a re-running this notebook on a new attribution method, comment the following cell out to save time!
 # %%
 from sklearn.metrics import ConfusionMatrixDisplay
 from matplotlib import pyplot as plt
 
 cf_confusion_matrix = evaluator.classification_report(
-                        data="counterfactuals",  # this is the default
-                        return_classification=False,
-                        print_report=False,
-                    )
+    data="counterfactuals",  # this is the default
+    return_classification=False,
+    print_report=False,
+)
 
 # Plot the confusion matrix
 disp = ConfusionMatrixDisplay(
-    confusion_matrix=cf_confusion_matrix, 
+    confusion_matrix=cf_confusion_matrix,
 )
 disp.plot()
 plt.show()
 
 # %% [markdown]
 # ## Defining the processor and quantifying the attributions
-# In order to get masks from attributions, we need to process them a little. 
-# Here we define a processor for the evaluator to use. 
+# In order to get masks from attributions, we need to process them a little.
+# Here we define a processor for the evaluator to use.
 # You can make a custom `Processor` class if your attribution requires more or less processing than is default.
-# 
+#
 # Given a processor, the evaluator runs quantification and returns a `Report`.
 # %%
 from quac.evaluation import Processor
@@ -97,7 +102,7 @@ from quac.evaluation import Processor
 report = evaluator.quantify(processor=Processor())
 # %% [markdown]
 # ## Plotting the report
-# The report can be used to plot the QuAC curve. 
+# The report can be used to plot the QuAC curve.
 # %%
 report.plot_curve()
 # %% [markdown]
