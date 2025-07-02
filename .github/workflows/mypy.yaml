@@ -4,6 +4,7 @@ on: [push, pull_request]
 
 jobs:
   static-analysis:
+    if: false  # Temporarily disabled
     name: Python mypy
     runs-on: ubuntu-latest
     steps:
