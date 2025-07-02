@@ -18,11 +18,36 @@ class SelectionLayer(torch.nn.Module):
         return x[:, self.selected]
 
 
+class GrayscaleToRGBLayer(torch.nn.Module):
+    """
+    A layer to convert grayscale images (1 channel) to RGB (3 channels).
+    This layer assumes the input is of shape (N, 1, H, W) or (N, H, W) for grayscale images,
+    and outputs a tensor of shape (N, 3, H, W) by repeating the single channel three times.
+    If the input is already in RGB format (3 channels), it simply returns the input unchanged.
+
+    This is useful for pre-trained models that expect RGB input but the data is in grayscale.
+    """
+
+    def __init__(self):
+        super(GrayscaleToRGBLayer, self).__init__()
+
+    def forward(self, x):
+        # If the input is of shape (N, H, W), add a channel dimension
+        if x.dim() == 3:
+            x = x.unsqueeze(1)
+        # Now, assuming x is of shape (N, 1, H, W)
+        if x.size(1) == 1:
+            return x.repeat(
+                1, 3, 1, 1
+            )  # Repeat the single channel to create 3 channels
+        return x  # If already RGB, return as is
+
+
 if __name__ == "__main__":
     input_checkpoint = (
         "/nrs/funke/adjavond/projects/quac/flyid/checkpoints/retry_model_best.pth.tar"
     )
-    output_checkpoint = "/nrs/funke/adjavond/projects/quac/flyid/final_classifier_jit_selected_classes.pth"
+    output_checkpoint = "/nrs/funke/adjavond/projects/quac/flyid/final_classifier_jit_selected_classes_grayscale.pth"
 
     checkpoint = torch.load(input_checkpoint)
     arch = checkpoint["arch"]
@@ -48,6 +73,7 @@ if __name__ == "__main__":
 
     # Wrap the module so that it only outputs the selected classes
     model.module = torch.nn.Sequential(
+        GrayscaleToRGBLayer(),
         model.module,
         # add the selection
         SelectionLayer(torch.tensor(select_classes) - 1),
