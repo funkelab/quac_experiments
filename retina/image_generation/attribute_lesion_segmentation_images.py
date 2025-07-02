@@ -2,7 +2,7 @@
 from PIL import Image
 from matplotlib import pyplot as plt
 import numpy as np
-from quac.generate import load_classifier 
+from quac.generate import load_classifier
 from quac.attribution import DIntegratedGradients, DDeepLift, DInGrad
 from quac.evaluation import Evaluator
 from quac.report import Report
@@ -13,7 +13,9 @@ from pathlib import Path
 from matplotlib.backends.backend_pdf import PdfPages
 
 # %%
-data_directory = Path("/nrs/funke/adjavond/data/retina/DDR-dataset/lesion_segmentation/train/")
+data_directory = Path(
+    "/nrs/funke/adjavond/data/retina/DDR-dataset/lesion_segmentation/train/"
+)
 image_directory = data_directory / "image"
 counterfactual_directory = data_directory / "counterfactual/reference/0_No_DR"
 label_directory = data_directory / "label/MA"
@@ -25,11 +27,13 @@ img_size = 224
 mean_generator = 0.5
 std_generator = 0.5
 
+
 def to_numpy(image):
     img = np.array(image)
     return np.transpose(img, (2, 0, 1))
 
-transform=transforms.Compose(
+
+transform = transforms.Compose(
     [
         transforms.Resize(img_size),
         transforms.CenterCrop(img_size),
@@ -39,7 +43,9 @@ transform=transforms.Compose(
 )
 
 # %%
-classifier_checkpoint = "/nrs/funke/adjavond/projects/quac/retina-ddr-classification/final_model.pt"
+classifier_checkpoint = (
+    "/nrs/funke/adjavond/projects/quac/retina-ddr-classification/final_model.pt"
+)
 mean = (0.485, 0.456, 0.406)
 std = (0.229, 0.224, 0.225)
 device = "cpu"
@@ -85,7 +91,7 @@ image_paths = list(image_directory.glob("*.jpg"))
 # %% Next, we'll do attribution
 
 methods = {
-	#"discriminative_ig": DIntegratedGradients(classifier),
+    # "discriminative_ig": DIntegratedGradients(classifier),
     "discriminative_dl": DDeepLift(classifier),
     # "discriminative_ingrad": DInGrad(classifier)
 }
@@ -121,7 +127,7 @@ for path in tqdm(image_paths):
 
     predictions = {
         "original": evaluator.run_inference(x)[0],
-        "counterfactual": evaluator.run_inference(x_t)[0]
+        "counterfactual": evaluator.run_inference(x_t)[0],
     }
 
     y = predictions["original"].argmax().item()
@@ -142,18 +148,18 @@ for path in tqdm(image_paths):
             predictions,
             attribution,
             results,
-            save_intermediates=False
+            save_intermediates=False,
         )
 
 # %%
 # Plot results
 n = len(reports)
 if n > 1:
-    fig, axes = plt.subplots(1, n, figsize=(n*5, 5))
+    fig, axes = plt.subplots(1, n, figsize=(n * 5, 5))
     for ax, (method, report) in zip(axes, reports.items()):
         report.plot_curve(ax)
         ax.set_title(method)
-else: 
+else:
     for method, report in reports.items():
         report.plot_curve()
         plt.title(method)
@@ -172,6 +178,7 @@ viz_transform = transforms.Compose(
     ]
 )
 
+
 def load_labels(image_path, img_size=224, label_types=["EX", "HE", "MA", "SE"]):
     label_transform = transforms.Compose(
         [
@@ -181,16 +188,22 @@ def load_labels(image_path, img_size=224, label_types=["EX", "HE", "MA", "SE"]):
     )
     all_labels = np.zeros((img_size, img_size))
     for i, label_type in enumerate(label_types):
-        label_path = str(image_path).replace("image", f"label/{label_type}").replace("jpg", "tif")
+        label_path = (
+            str(image_path)
+            .replace("image", f"label/{label_type}")
+            .replace("jpg", "tif")
+        )
         label = Image.open(label_path)
         label = label_transform(label)
 
         label = np.array(label) / 255
-        all_labels += label * (i+1)
+        all_labels += label * (i + 1)
     return all_labels
 
 
-def load_labels_separate(image_path, img_size=224, label_types=["EX", "HE", "MA", "SE"]):
+def load_labels_separate(
+    image_path, img_size=224, label_types=["EX", "HE", "MA", "SE"]
+):
     label_transform = transforms.Compose(
         [
             transforms.Resize(img_size, interpolation=Image.NEAREST),
@@ -199,7 +212,11 @@ def load_labels_separate(image_path, img_size=224, label_types=["EX", "HE", "MA"
     )
     all_labels = []
     for i, label_type in enumerate(label_types):
-        label_path = str(image_path).replace("image", f"label/{label_type}").replace("jpg", "tif")
+        label_path = (
+            str(image_path)
+            .replace("image", f"label/{label_type}")
+            .replace("jpg", "tif")
+        )
         label = Image.open(label_path)
         label = label_transform(label)
 
@@ -219,8 +236,10 @@ def mask_label_overlay(mask, label_image, thresh=0.1):
     rgb[true_positives] = [0, 255, 0]
     rgb[false_negatives] = [255, 0, 0]
     # rgb[others] = np.stack([mask_image[others], mask_image[others], mask_image[others]], axis=-1)
-    
+
     return rgb
+
+
 # %%
 with PdfPages("lesion_segmentation_reference.pdf") as pdf:
     for idx in tqdm(np.argsort(quac_scores)[::-1][:10]):
@@ -234,12 +253,17 @@ with PdfPages("lesion_segmentation_reference.pdf") as pdf:
 
         thr = report.get_optimal_threshold(idx)
         mask, mask_size = evaluator.create_mask(attr, thr)
-        
+
         mask = np.transpose(mask, (1, 2, 0))
-        hybrid = mask * np.array(x_t) / 255  + (1 - mask) * np.array(x) / 255
+        hybrid = mask * np.array(x_t) / 255 + (1 - mask) * np.array(x) / 255
         normalized_hybrid = torch.from_numpy(2 * np.transpose(hybrid, (2, 0, 1)) - 1)
 
-        fig, (headers, axes) = plt.subplots(2, 4, figsize=(20, np.ceil(1.3 * 5)), gridspec_kw={"height_ratios": [0.2, 1], "hspace": 0.})
+        fig, (headers, axes) = plt.subplots(
+            2,
+            4,
+            figsize=(20, np.ceil(1.3 * 5)),
+            gridspec_kw={"height_ratios": [0.2, 1], "hspace": 0.0},
+        )
         # axes[0].imshow(x.cpu().numpy().transpose(1, 2, 0))
         # axes[1].imshow(x_t.cpu().numpy().transpose(1, 2, 0))
         axes[0].imshow(x)
@@ -247,7 +271,14 @@ with PdfPages("lesion_segmentation_reference.pdf") as pdf:
         axes[2].imshow((255 * hybrid).astype(np.uint8))
         pred = report.predictions[idx]
         target_pred = report.target_predictions[idx]
-        hybrid_pred = classifier(normalized_hybrid.unsqueeze(0)).softmax(1).detach().cpu().numpy().squeeze()
+        hybrid_pred = (
+            classifier(normalized_hybrid.unsqueeze(0))
+            .softmax(1)
+            .detach()
+            .cpu()
+            .numpy()
+            .squeeze()
+        )
 
         headers[0].barh(range(len(pred)), pred)
         headers[0].set_xlim(0, 1)
@@ -263,7 +294,7 @@ with PdfPages("lesion_segmentation_reference.pdf") as pdf:
         headers[2].set_title("Hybrid")
 
         # Masks etc
-        axes[3].imshow(mask_label_overlay(mask, label_image)) 
+        axes[3].imshow(mask_label_overlay(mask, label_image))
         axes[3].set_title(f"Score: {quac_scores[idx]:.2f}")
 
         for ax in axes:
@@ -285,7 +316,7 @@ label_types = ["EX", "HE", "MA", "SE"]
 
 ap_scores = {label: [] for label in label_types}
 indices = {label: [] for label in label_types}
-for idx in tqdm(range(len(quac_scores))): # quac_scores[:10]):
+for idx in tqdm(range(len(quac_scores))):  # quac_scores[:10]):
     attr = report.load_attribution(idx)
     # image = Image.open(report.paths[idx])
     # cf_image = Image.open(report.target_paths[idx])

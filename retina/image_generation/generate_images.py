@@ -5,12 +5,7 @@ import torch
 from tqdm import tqdm
 import typer
 from pathlib import Path
-from quac.generate import (
-    load_data, 
-    load_classifier, 
-    load_stargan, 
-    get_counterfactual 
-)
+from quac.generate import load_data, load_classifier, load_stargan, get_counterfactual
 
 
 def unnormalize(x):
@@ -52,22 +47,30 @@ def main(
     }
     mean = (0.485, 0.456, 0.406)
     std = (0.229, 0.224, 0.225)
-    
+
     data_directory = Path(root_directory) / f"{split}/{class_names[source]}"
     if device is None:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     grayscale = input_dim == 1
     dataset = load_data(data_directory, img_size, grayscale=grayscale)
 
-    if kind == "reference": 
-        reference_data_directory = Path(root_directory) / f"{split}/{class_names[target]}"
-        reference_dataset = load_data(reference_data_directory, img_size, grayscale=grayscale)
-    else: 
+    if kind == "reference":
+        reference_data_directory = (
+            Path(root_directory) / f"{split}/{class_names[target]}"
+        )
+        reference_dataset = load_data(
+            reference_data_directory, img_size, grayscale=grayscale
+        )
+    else:
         reference_dataset = None
 
     # Use ImageNet normalization
-    classifier = load_classifier(classifier_checkpoint, mean=mean, std=std, eval=True, device=device)
-    latent_model_checkpoint_dir = Path(latent_model_root_dir) / f"{run_name}/checkpoints"
+    classifier = load_classifier(
+        classifier_checkpoint, mean=mean, std=std, eval=True, device=device
+    )
+    latent_model_checkpoint_dir = (
+        Path(latent_model_root_dir) / f"{run_name}/checkpoints"
+    )
     inference_model = load_stargan(
         latent_model_checkpoint_dir,
         img_size=img_size,
@@ -76,7 +79,7 @@ def main(
         latent_dim=latent_dim,
         num_domains=num_domains,
         checkpoint_iter=checkpoint_iter,
-        kind = kind,
+        kind=kind,
         single_output_encoder=single_output_encoder,
     )
 
@@ -86,7 +89,10 @@ def main(
         source_name = class_names[source]
 
     # Add source and target to the output directory
-    output_directory = Path(output_directory) / f"{run_name}/{kind}/{split}/{source_name}/{target_name}"
+    output_directory = (
+        Path(output_directory)
+        / f"{run_name}/{kind}/{split}/{source_name}/{target_name}"
+    )
     print("Output directory:", output_directory)
     # Make directory if it does not exist
     os.makedirs(output_directory, exist_ok=True)
@@ -97,7 +103,7 @@ def main(
             inference_model,
             x,
             target,
-            kind, 
+            kind,
             reference_dataset,
             device=device,
             max_tries=max_tries,
@@ -105,9 +111,15 @@ def main(
         # TODO save in grayscale and with correct normalization?
         if grayscale:
             xcf = unnormalize(xcf).squeeze()
-        else: 
+        else:
             xcf = np.transpose(unnormalize(xcf).squeeze(), (1, 2, 0))
-        plt.imsave(os.path.join(output_directory, f"{name}.png"), xcf, cmap="gray", vmin=0, vmax=1)
+        plt.imsave(
+            os.path.join(output_directory, f"{name}.png"),
+            xcf,
+            cmap="gray",
+            vmin=0,
+            vmax=1,
+        )
 
 
 if __name__ == "__main__":

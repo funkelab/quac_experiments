@@ -1,6 +1,7 @@
 """
 Loading the images, classifying them, and storing them to zarr.
 """
+
 import zarr
 from funlib.learn.torch.models.vgg2d import Vgg2D
 import torch
@@ -15,7 +16,7 @@ import typer
 
 
 def run_worker(
-    image_directory_path : str = "/nrs/funke/adjavond/data/synapses/test/",
+    image_directory_path: str = "/nrs/funke/adjavond/data/synapses/test/",
     output_zarr_path: str = "/nrs/funke/adjavond/projects/quac/synapses_onzarr/20240808_results_test.zarr",
 ):
     """
@@ -28,15 +29,17 @@ def run_worker(
     transform = transforms.Compose(
         [transforms.Grayscale(), transforms.ToTensor(), transforms.Normalize(0.5, 0.5)]
     )
-    dataset = ImageFolder(root = image_directory_path, transform=transform)
+    dataset = ImageFolder(root=image_directory_path, transform=transform)
 
     # Metadata
     N = len(dataset)
     batch_size = min(512, N)
     chunk_size = min(32, N)
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    dataloader = DataLoader(dataset, batch_size=batch_size, pin_memory=True, shuffle=False, drop_last=False)
+    dataloader = DataLoader(
+        dataset, batch_size=batch_size, pin_memory=True, shuffle=False, drop_last=False
+    )
 
     # Loading the pre-trained classifier
     model = Vgg2D(input_size=(128, 128), fmaps=12)
@@ -59,10 +62,7 @@ def run_worker(
         dtype="float32",
     )
     labels = group.require_dataset(
-        "labels", 
-        shape=(N),
-        chunks=(chunk_size),
-        dtype="uint8"
+        "labels", shape=(N), chunks=(chunk_size), dtype="uint8"
     )
     predictions = group.require_dataset(
         "predictions",

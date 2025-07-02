@@ -121,7 +121,7 @@ def main(
             dataset_ref=reference_dataset,
             device=device,
             max_tries=max_tries,
-            return_path=True
+            return_path=True,
         )
         xcf = np.transpose(unnormalize(xcf).squeeze(), (1, 2, 0))
         plt.imsave(

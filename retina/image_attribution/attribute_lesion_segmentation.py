@@ -19,7 +19,9 @@ metadata = safe_load(open("lesion_segmentation.yaml"))
 from quac.generate import load_classifier
 
 classifier = load_classifier(
-    metadata["classifier_checkpoint"], mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)
+    metadata["classifier_checkpoint"],
+    mean=(0.485, 0.456, 0.406),
+    std=(0.229, 0.224, 0.225),
 )
 # %% [markdown]
 # ## Preparing the attribution parts
@@ -29,11 +31,11 @@ classifier = load_classifier(
 # %% Creating the attributions
 # Defining attributions
 from quac.attribution import (
-    DDeepLift, 
-    DIntegratedGradients, 
-    AttributionIO, 
-    VanillaDeepLift, 
-    VanillaIntegratedGradient
+    DDeepLift,
+    DIntegratedGradients,
+    AttributionIO,
+    VanillaDeepLift,
+    VanillaIntegratedGradient,
 )
 from torchvision import transforms
 
@@ -73,8 +75,3 @@ attributor.run(
     counterfactual_directory=metadata["counterfactual_directory"],
     transform=transform,
 )
-
-# %% [markdown]
-# After this, you're done! Your attributions should be in the directory specified in the metadata file.
-!ls -al {metadata["attribution_directory"]}
-# %%

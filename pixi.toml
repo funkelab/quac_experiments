@@ -1,0 +1,15 @@
+[project]
+authors = ["Diane Adjavon <adjavond@hhmi.org>"]
+channels = ["conda-forge"]
+description = "Add a short description here"
+name = "quac-experiments"
+platforms = ["linux-64"]
+version = "0.1.0"
+
+[dependencies]
+python = ">=3.11,<3.13"
+
+[pypi-dependencies]
+mypy = ">=1.16.1, <2"
+black = ">=25.1.0, <26"
+pytest = ">=8.4.1, <9"

@@ -40,7 +40,7 @@ class ExperimentConfig(BaseModel):
     project: str
     notes: str
     tags: List[str] = ["quac"]
-    log_images: int = 8 # Number of images to log to wandb
+    log_images: int = 8  # Number of images to log to wandb
     data: DataConfig
     model: ModelConfig
     training: TrainingConfig
