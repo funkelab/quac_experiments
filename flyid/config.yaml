@@ -34,7 +34,7 @@ solver:
   root_dir: "/nrs/funke/adjavond/projects/quac/flyid/stargan_20250702"
 
 validation_config: 
-  classifier_checkpoint: "/nrs/funke/adjavond/projects/quac/flyid/final_classifier_jit_selected_classes.pth"
+  classifier_checkpoint: "/nrs/funke/adjavond/projects/quac/flyid/final_classifier_jit_selected_classes_grayscale.pth"
   val_batch_size: 16
 
 log:
