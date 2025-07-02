@@ -2,12 +2,10 @@ from torchvision import datasets, transforms
 import torch
 from tqdm import tqdm
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 
 def main():
-    suffix = "_selected_weights"
+    suffix = "_selected_classes_grayscale"
     mu = 0.5
     sigma = 0.5
     num_classes = 3
@@ -29,8 +27,9 @@ def main():
     # transformations for testing
     trans_test = transforms.Compose(
         [
+            transforms.Grayscale(),  # These are grayscale images
             transforms.ToTensor(),
-            transforms.Normalize(mean=[mu, mu, mu], std=[sigma, sigma, sigma]),
+            transforms.Normalize((mu,), (sigma,)),
         ]
     )
 
@@ -51,6 +50,7 @@ def main():
         confusion_matrix = torch.zeros(num_classes, num_classes)
         for input, target in tqdm(test_loader):
             input = input.cuda()
+            assert input.shape[1] == 1, "Input should be grayscale"
             target = target.cuda()
 
             # compute output
