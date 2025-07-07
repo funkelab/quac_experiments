@@ -1,92 +1,156 @@
+from argparse import ArgumentParser
 from pathlib import Path
-from quac.generate import load_data, load_stargan, get_counterfactual
-import torch
+from quac.config import ExperimentConfig, get_data_config
+from quac.generate import load_classifier, load_stargan, get_counterfactual
+from quac.data import write_image, create_transform, DefaultDataset
 from tqdm import tqdm
-from torchvision.utils import save_image
-from yaml import safe_load
+import torch
+import yaml
 
 
-def load_classifier(checkpoint):
-    """Load the classifier."""
-    model = torch.jit.load(checkpoint)
-    model = model.cuda()
-    model = model.eval()
-    return model
+# Computed setup
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-@torch.no_grad()
-def main(
-    config_path: str = "configs/stargan.yml",
-    checkpoint_iter: int = 100000,
-    kind: str = "latent",
-    subdir: str = "Day2/val",
-):
-    # Load metadata
-    print("Loading metadata")
-    with open(config_path, "r") as f:
-        metadata = safe_load(f)
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    # Load the classifier
-    print("Loading classifier")
-    classifier = load_classifier(metadata["validation_config"]["classifier_checkpoint"])
-
-    # Load the model
-    print("Loading model")
-    latent_model_checkpoint_dir = Path(metadata["solver"]["root_dir"]) / "checkpoints"
-    inference_model = load_stargan(
-        latent_model_checkpoint_dir,
-        checkpoint_iter=checkpoint_iter,
-        kind=kind,
-        **metadata["model"],
+def parse_args():
+    parser = ArgumentParser()
+    parser.add_argument(
+        "--source_class",
+        type=str,
+        required=True,
+        help="Name of the source class to take images from.",
     )
+    parser.add_argument(
+        "--target_class",
+        type=str,
+        required=True,
+        help="Name of the target class to convert images to.",
+    )
+    parser.add_argument(
+        "--checkpoint_iter",
+        type=int,
+        default=50000,
+        help="Iteration of the checkpoint to load.",
+    )
+    parser.add_argument(
+        "-c",
+        "--config",
+        type=str,
+        default="config.yaml",
+        help="Path to the configuration file.",
+    )
+    parser.add_argument(
+        "--dataset",
+        "-d",
+        type=str,
+        default="test",
+        help="""
+        Which dataset to use. 
+        If not provided, we will check if test exists, else use validation.
+        Options are ["train", "validation", "test"]
+        """,
+        choices=["train", "validation", "test"],
+    )
+    parser.add_argument(
+        "--output",
+        "-o",
+        type=str,
+        default=None,
+        help="Output directory to save the images.",
+    )
+    parser.add_argument(
+        "--kind",
+        type=str,
+        default="latent",
+        help="Method for obtaining the style.",
+        choices=["latent", "reference"],
+    )
+    return parser.parse_args()
 
-    # Load the data
-    soure_dir = metadata["test_data"]["source"]
-    available_sources = [d.name for d in Path(soure_dir).iterdir() if d.is_dir()]
-    img_size = metadata["test_data"]["img_size"]
 
-    # Generate counterfactuals
-    for source, source_name in enumerate(available_sources):
-        for target, target_name in enumerate(available_sources):
-            if source == target:
-                continue
-            print("Running for source", source_name, "and target", target_name)
-
-            data_directory = Path(metadata["test_data"]["source"]) / source_name
-            dataset = load_data(data_directory, img_size, grayscale=False)
-
-            output_directory = (
-                Path(metadata["solver"]["root_dir"])
-                / f"generated_images/{kind}/{source_name}/{target_name}/{subdir}"
-            )
-            output_directory.mkdir(parents=True, exist_ok=True)
-            print("Generated images will be saved in:", str(output_directory))
-
-            for x, name in tqdm(dataset):
-                # Repeat the image 3 times to get the 3 channels
-                x = x.repeat(1, 3, 1, 1).to(device).squeeze()
-                xcf = get_counterfactual(
-                    classifier,
-                    inference_model,
-                    x,
-                    target=target,
-                    kind=kind,
-                    device=device,
-                    max_tries=1,
-                    batch_size=10,
-                )
-                xcf = xcf * 0.5 + 0.5
-                assert (
-                    xcf.min() >= 0 and xcf.max() <= 1
-                ), f"Generated images are not in [0, 1]: {xcf.min()}, {xcf.max()}"
-                # For example, you can save the images here
-                save_image(xcf, output_directory / name)
+def get_target_index(source_directory, target_class):
+    # Figure out which "domain" the target class is, by how the directories are structured
+    source_directory = Path(source_directory)
+    subdirs = [d for d in source_directory.iterdir() if d.is_dir()]
+    subdirs = sorted(subdirs)
+    try:
+        target_index = subdirs.index(source_directory / target_class)
+    except ValueError:
+        raise ValueError(f"Target class {target_class} not found in {source_directory}")
+    return target_index
 
 
 if __name__ == "__main__":
-    main(
-        checkpoint_iter=35000,
-        kind="latent",
+    args = parse_args()
+    # Load the configuration
+    with open(args.config, "r") as file:
+        config = yaml.safe_load(file)
+    experiment = ExperimentConfig(**config)
+
+    data_config = get_data_config(experiment, args.dataset)
+
+    transform = create_transform(
+        img_size=data_config.img_size,
+        grayscale=data_config.grayscale,
+        rgb=data_config.rgb,
+        scale=data_config.scale,
+        shift=data_config.shift,
     )
+    dataset = DefaultDataset(
+        root=Path(data_config.source) / args.source_class,
+        transform=transform,
+    )
+
+    reference_dataset = None
+    if args.kind == "reference":
+        reference_dataset = DefaultDataset(
+            root=Path(data_config.reference) / args.target_class,
+            transform=transform,
+        )
+
+    target_index = get_target_index(data_config.source, args.target_class)
+
+    if args.output:
+        output_directory = Path(args.output)
+    else:
+        output_directory = (
+            Path(experiment.solver.root_dir) / "generated_images" / args.kind
+        )
+    # Add subdirectories for the source and target classes
+    output_directory = (output_directory / args.source_class) / args.target_class
+    output_directory.mkdir(parents=True, exist_ok=True)
+
+    classifier_config = experiment.validation_config
+
+    classifier = load_classifier(
+        classifier_config.classifier_checkpoint,
+        scale=classifier_config.scale,
+        shift=classifier_config.shift,
+        eval=True,
+        device=device,
+    )
+
+    # Load the StarGAN model
+    checkpoint_dir = Path(experiment.solver.root_dir) / "checkpoints"
+
+    inference_model = load_stargan(
+        checkpoint_dir=checkpoint_dir,
+        **experiment.model.model_dump(),
+        checkpoint_iter=args.checkpoint_iter,
+        kind=args.kind,
+    )
+
+    for x, name in tqdm(dataset):
+        xcf, _, _ = get_counterfactual(
+            classifier,
+            inference_model,
+            x,
+            target=target_index,
+            kind=args.kind,
+            dataset_ref=reference_dataset,
+            device=device,
+            max_tries=10,
+            batch_size=10,
+        )
+        # Save the images here
+        write_image(xcf, output_directory / name)
