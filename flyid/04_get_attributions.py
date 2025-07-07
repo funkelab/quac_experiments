@@ -1,77 +1,112 @@
-from quac.attribution import (
-    DDeepLift,
-    DIntegratedGradients,
-    AttributionIO,
-    VanillaDeepLift,
-    VanillaIntegratedGradients,
-)
-from quac.training.classification import ClassifierWrapper
-from pathlib import Path
+from argparse import ArgumentParser
 import torch
-from torchvision import transforms
-from yaml import safe_load
+import quac.attribution
+from quac.config import ExperimentConfig, get_data_config
+from quac.generate import load_classifier
+from quac.attribution import AttributionIO
+from quac.data import create_transform
+import yaml
 
 
-def main(
-    subdir="Day2/val",
-    config_path: str = "configs/stargan.yml",
-    kind="latent",
-    mean=0.5,
-    std=0.5,
-):
-    print("Loading metadata")
-    with open(config_path, "r") as f:
-        metadata = safe_load(f)
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    print("Loading classifier")
-    classifier_checkpoint = Path(metadata["validation_config"]["classifier_checkpoint"])
-    classifier = ClassifierWrapper(
-        # TODO use all of the details from the config
-        classifier_checkpoint,
-        do_nothing=True,
-    ).to(device)
-    classifier.eval()
-
-    print("Setting up attributions")
-    attribution_directory = (
-        Path(metadata["solver"]["root_dir"]) / f"attributions/{kind}/{subdir}"
+def parse_args():
+    parser = ArgumentParser()
+    parser.add_argument(
+        "--config",
+        "-c",
+        type=str,
+        default="config.yaml",
+        help="Path to the configuration file.",
     )
-    # Create the Attribution objects
-    attributor = AttributionIO(
-        attributions={
-            "DDeepLift": DDeepLift(classifier),
-            "DIntegratedGradients": DIntegratedGradients(classifier),
-            "VanillaDeepLift": VanillaDeepLift(classifier),
-            "VanillaIntegratedGradients": VanillaIntegratedGradients(classifier),
-        },
-        output_directory=attribution_directory,
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        choices=["train", "validation", "test"],
+        default="test",
+        help="Dataset to use for generating images.",
     )
-
-    print("Running attributions")
-    source_dir = metadata["test_data"]["source"]
-    generated_dir = (
-        Path(metadata["solver"]["root_dir"]) / f"generated_images/{kind}/{subdir}"
+    parser.add_argument(
+        "-o",
+        "--output",
+        type=str,
+        default=None,
+        help="""
+        Output directory for the generated attributions. 
+        Defaults to an `attributions` folder in the experiment root directory, 
+        based on the config file.""",
     )
-    # This transform will be applied to all images before running attributions
-    transform = transforms.Compose(
-        [transforms.Resize(224), transforms.ToTensor(), transforms.Normalize(mean, std)]
+    parser.add_argument(
+        "-i",
+        "--input",
+        type=str,
+        default=None,
+        help="""
+        Directory holding the generated images (converted).
+        Defaults to the `generated_images` directory in the experiment root directory,
+        as defined in the config file.
+        """,
     )
-
-    # Shows a progress bar
-    attributor.run(
-        source_directory=source_dir,
-        generated_directory=generated_dir,
-        transform=transform,
+    parser.add_argument(
+        "-k",
+        "--kind",
+        type=str,
+        choices=["latent", "reference"],
+        default="latent",
+        help="""
+        Kind of image generation that was done. Used to find the generated images. 
+        """,
     )
+    return parser.parse_args()
 
 
 if __name__ == "__main__":
-    main(
-        subdir="Day2/val",
-        config_path="configs/stargan.yml",
-        kind="latent",
-        mean=0.5,
-        std=0.5,
+    args = parse_args()
+    # Load the configuration
+    with open(args.config, "r") as file:
+        config = yaml.safe_load(file)
+    experiment = ExperimentConfig(**config)
+
+    data_config = get_data_config(experiment, args.dataset)
+    classifier_config = experiment.validation_config
+
+    data_directory = data_config.source
+    attribution_directory = args.output or f"{experiment.solver.root_dir}/attributions"
+    generated_directory = (
+        args.input or f"{experiment.solver.root_dir}/generated_images/{args.kind}"
+    )
+
+    # Load the classifier
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    classifier = load_classifier(
+        checkpoint=classifier_config.classifier_checkpoint,
+        scale=classifier_config.scale,
+        shift=classifier_config.shift,
+    )
+    classifier.to(device)
+    classifier.eval()
+
+    # Defining attributions
+    attributions = experiment.attribution.attributions
+    attributions_dict = {
+        name: getattr(quac.attribution, name)(classifier) for name in attributions
+    }
+
+    attributor = AttributionIO(
+        attributions=attributions_dict,
+        output_directory=attribution_directory,
+    )
+
+    transform = create_transform(
+        img_size=data_config.img_size,
+        grayscale=data_config.grayscale,
+        rgb=data_config.rgb,
+        scale=data_config.scale,
+        shift=data_config.shift,
+    )
+
+    # This will run attributions and store all of the results in the output_directory
+    # Shows a progress bar
+    attributor.run(
+        source_directory=data_directory,
+        generated_directory=generated_directory,
+        transform=transform,
     )

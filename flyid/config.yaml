@@ -47,6 +47,13 @@ log:
     - training
     - quac
 
+attribution: 
+  attributions: 
+    - "DIntegratedGradients"
+    - "DDeepLift"
+    - "VanillaIntegratedGradients"
+    - "VanillaDeepLift"
+
 run: 
   log_every: 100
   total_iters: 40000
