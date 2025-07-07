@@ -70,9 +70,16 @@ if __name__ == "__main__":
 
     class_names = {0: "11", 1: "15", 2: "17"}
 
+    # Randomly order the name of the images, so that when we count them as 0...n_samples*n_categories the are in a random order.
+    n_categories = len(class_names) * (len(class_names) - 1)  # n*(n-1) pairs
+    names = list(range(args.n_samples * n_categories))
+    random.shuffle(names)
+    print(names)
+
     with open(filename, "w") as f:
         # Write the header for the metadata file
         f.write("source,target,score,a_real,hex_id\n")
+        i = 0
         for source in 0, 1, 2:
             for target in 0, 1, 2:
                 if source == target:
@@ -86,8 +93,9 @@ if __name__ == "__main__":
                     subset_report.explanations,
                     desc=f"Processing {class_names[source]} to {class_names[target]}",
                 ):
-                    # Get a random hex ID
-                    name = hex(random.getrandbits(64))[2:]
+                    # Get next random int id
+                    name = names[i]
+                    i += 1
                     # Get random binary value
                     a_real = random.getrandbits(1)
                     # Save images
@@ -148,3 +156,18 @@ if __name__ == "__main__":
     features_file = folder / "features.json"
     with open(features_file, "w") as f:
         json.dump(features, f, indent=4)
+
+    # Create a "results.csv" file for starting the annotation.
+    # It should have an `image_id` column, followed by the features.
+    # It should have a length of the total number of images in the A folder (number of pairs x number of samples).
+    # It should be filled with 2 for all features for all rows (unannotated).
+    results_file = folder / "results.csv"
+    with open(results_file, "w") as f:
+        # Write the header
+        f.write(
+            "image_id," + ",".join([feature["name"] for feature in features]) + "\n"
+        )
+        # Write the rows
+        for i, image in enumerate(a_folder.glob("*.png")):
+            row = [str(i)] + ["2"] * len(features)
+            f.write(",".join(row) + "\n")
