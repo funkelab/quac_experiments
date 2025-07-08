@@ -1,7 +1,9 @@
 import argparse
+from importlib.metadata import metadata
 import yaml
 from quac.report import Report
-from quac.data import write_image
+from quac.data import write_image, create_transform
+from quac.config import ExperimentConfig
 from pathlib import Path
 import random
 import json
@@ -52,8 +54,20 @@ if __name__ == "__main__":
     args = parse_args()
     random.seed(args.seed)
 
-    metadata = yaml.safe_load(open("config.yaml"))
-    report_directory = metadata["solver"]["root_dir"] + "/reports"
+    with open(args.config, "r") as f:
+        config = ExperimentConfig(**yaml.safe_load(f))
+    report_directory = config.solver.root_dir + "/reports"
+
+    # Get the data transform
+    data_config = config.data
+    transform = create_transform(
+        img_size=data_config.img_size,
+        grayscale=data_config.grayscale,
+        rgb=data_config.rgb,
+        scale=data_config.scale,
+        shift=data_config.shift,
+    )
+
     # Load the results
     report = Report.from_directory(report_directory, name="final_report")
 
@@ -74,7 +88,6 @@ if __name__ == "__main__":
     n_categories = len(class_names) * (len(class_names) - 1)  # n*(n-1) pairs
     names = list(range(args.n_samples * n_categories))
     random.shuffle(names)
-    print(names)
 
     with open(filename, "w") as f:
         # Write the header for the metadata file
@@ -101,17 +114,23 @@ if __name__ == "__main__":
                     # Save images
                     if a_real:
                         # Save the real image to the A folder
-                        write_image(explanation.query, a_folder / f"{name}.png")
+                        write_image(
+                            transform(explanation.query), a_folder / f"{name}.png"
+                        )
                         # Save the counterfactual image to the B folder
                         write_image(
-                            explanation.counterfactual, b_folder / f"{name}.png"
+                            transform(explanation.counterfactual),
+                            b_folder / f"{name}.png",
                         )
                     else:
                         # Save the real image to the B folder
-                        write_image(explanation.query, b_folder / f"{name}.png")
+                        write_image(
+                            transform(explanation.query), b_folder / f"{name}.png"
+                        )
                         # Save the counterfactual image to the A folder
                         write_image(
-                            explanation.counterfactual, a_folder / f"{name}.png"
+                            transform(explanation.counterfactual),
+                            a_folder / f"{name}.png",
                         )
                     # Save the mask image to the M folder
                     write_image(explanation.mask, m_folder / f"{name}.png")
