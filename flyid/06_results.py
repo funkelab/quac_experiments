@@ -6,13 +6,10 @@ from quac.report import Report
 from sklearn.metrics import confusion_matrix
 
 # %%
-metadata = yaml.safe_load(open("configs/stargan.yml"))
-subdir = "Day2/val"
+metadata = yaml.safe_load(open("config.yaml"))
 kind = "latent"
 
-metadata["report_directory"] = (
-    metadata["solver"]["root_dir"] + f"/reports/{kind}/{subdir}"
-)
+metadata["report_directory"] = metadata["solver"]["root_dir"] + "/reports"
 # %% Final version of the report
 # Load the results
 report = Report.from_directory(metadata["report_directory"], name="final_report")
@@ -23,8 +20,9 @@ predictions = [
 ]
 targets = [explanation.target_class for explanation in report]
 cm = confusion_matrix(targets, predictions)
+print(cm)
 # Save the confusion matrix
-np.savetxt("results/cf_confusion_matrix.csv", cm, delimiter=",")
+np.savetxt("new_results/cf_confusion_matrix.csv", cm, delimiter=",")
 
 # %% Select a subset of the report
 filtered_report = report.from_source(2).to_target(0).score_threshold(0.95)
