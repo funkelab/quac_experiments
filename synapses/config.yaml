@@ -1,0 +1,44 @@
+data:
+    source: "/nrs/funke/adjavond/data/synapses/train"
+    img_size: 128
+    batch_size: 16
+    num_workers: 12
+    grayscale: true
+
+validation_data:
+    source: "/nrs/funke/adjavond/data/synapses/val"
+    img_size: 128
+    batch_size: 16
+    num_workers: 12
+    grayscale: true
+    
+model:
+    img_size: 128
+    style_dim: 64
+    latent_dim: 16
+    num_domains: 6
+    input_dim: 1
+    final_activation: "tanh"
+
+solver:
+    root_dir: "/nrs/funke/adjavond/projects/quac/synapses_20250728/"
+
+validation_config:
+    classifier_checkpoint: "/nrs/funke/adjavond/projects/quac/synapse-classification/final_model.pt"
+    val_batch_size: 16
+  
+log:
+    project: "synapses-stargan"
+    name: "stargan_20250728"
+    notes: "Stargan training on synapse dataset"
+    tags:
+        - stargan
+        - training
+        - synapses
+        - quac
+
+run:
+    log_every: 100
+    total_iters: 100000
+    save_every: 1000
+    eval_every: 1000
