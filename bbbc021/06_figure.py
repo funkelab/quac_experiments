@@ -47,8 +47,10 @@ with open("config.yaml", "r") as f:
     experiment = ExperimentConfig(**config)
     report_directory = Path(experiment.solver.root_dir) / "reports"
 
+print("Reading final report...")
 report = Report(report_directory)
 report.load(report_directory / "final_report_filtered.json")
+print("...done.")
 # %%
 class_names = [
     "actin_disruptors",
@@ -58,67 +60,55 @@ class_names = [
     "protein_degradation",
     "protein_synthesis",
 ]
-# %% [markdown]
-# ## 1. Representative samples
-# We extract representative samples from the annotation results.
-#
-# %%
-plates = [
-    "Week1_22141",
-    "Week8_38203",
-    "Week3_25461",
-    "Week1_22141",
-    "Week7_34341",
-    "Week9_39206",
-    "Week3_25701",
-    "Week8_38241",
-]
-wells = ["B03", "E11", "B07", "F11", "C09", "D02", "C07", "G11"]
-tables = [1, 8, 3, 1, 7, 9, 3, 8]
-images = [247, 160, 502, 440, 71, 81, 3183, 717]
-cells = [32, 44, 35, 129, 50, 9, 24, 62]
 
-for plate, well, table, image, cell in zip(
-    plates,
-    wells,
-    tables,
-    images,
-    cells,
-):
-    explanation = [
-        ex
-        for ex in report.explanations
-        if Path(ex._query_path).stem == f"{plate}_{well}_{table}_{image}_{cell}"
-    ][0]
-    end_path = Path(
-        f"figures/{class_names[explanation.source_class]}/{class_names[explanation.target_class]}"
-    )
-    real_path = end_path / "real"
-    counterfactual_path = end_path / "counterfactual"
-    mask_path = end_path / "mask"
-    real_path.mkdir(parents=True, exist_ok=True)
-    counterfactual_path.mkdir(parents=True, exist_ok=True)
-    mask_path.mkdir(parents=True, exist_ok=True)
+for source_class in range(6):
+    for target_class in range(6):
+        if source_class == target_class:
+            continue
+        if source_class != 1 and target_class != 1:
+            continue
 
-    for i, channel in enumerate(["f_actin", "b_tubulin", "dapi"]):
-        # Downsample query to match counterfactual, because we downsampled for training
-        query = F.resize(explanation.query, explanation.counterfactual.shape[1:])
-        write_image(
-            query[i],
-            real_path / f"{channel}.png",
-        )
+        top10 = report.from_source(source_class).to_target(target_class).top_n(10)
 
-        write_image(
-            explanation.counterfactual[i],
-            counterfactual_path / f"{channel}.png",
-        )
-    write_image(query, real_path / "merged.png")
-    write_image(explanation.counterfactual, counterfactual_path / "merged.png")
-    save_contours(
-        explanation.mask,
-        mask_path,
-        channels=["f_actin", "b_tubulin", "dapi"],
-        threshold=0.3,
-    )
+        for sample, explanation in enumerate(top10.explanations):
 
-# %%
+            sample_path = Path(
+                f"figures/{class_names[source_class]}/{class_names[target_class]}/{sample}"
+            )
+            sample_path.mkdir(parents=True, exist_ok=True)
+
+            # Downsample query to match counterfactual, because we downsampled for training
+            query = F.resize(explanation.query, explanation.counterfactual.shape[1:])
+
+            # We don't have a use for those images, skip that
+            # for i, channel in enumerate(["f_actin", "b_tubulin", "dapi"]):
+                # write_image(
+                    # query[i],
+                    # sample_path / f"image_{channel}.png",
+                # )
+
+                # write_image(
+                    # explanation.counterfactual[i],
+                    # sample_path / f"cf_image_{channel}.png",
+                # )
+
+            write_image(query, sample_path / "image.png")
+            write_image(explanation.counterfactual, sample_path / "hybrid.png")
+            save_contours(
+                explanation.mask,
+                sample_path,
+                channels=["contour_red", "contour_green", "contour_blue"],
+                threshold=explanation._optimal_threshold,
+            )
+
+            # Store the predictions as well
+            with open(sample_path / "predictions.csv", "w") as f:
+                f.write("filename,A,B,C,D,E,F,style\n")
+
+                f.write("image.png,")
+                f.write(",".join([str(v) for v in explanation.query_prediction]))
+                f.write(",image\n")
+
+                f.write("hybrid.png,")
+                f.write(",".join([str(v) for v in explanation.counterfactual_prediction]))
+                f.write(",counterfactual\n")
